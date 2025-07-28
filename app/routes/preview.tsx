@@ -57,13 +57,13 @@ export default function Preview() {
     try {
       const timestamp = new Date().getTime();
 
-      // 명함 데이터를 URL 파라미터로 인코딩
-      console.log("QR 생성 시 selectedLetters:", selectedLetters);
+      // sessionStorage에서 직접 가져오기
+      const savedLetters = sessionStorage.getItem("selectedLetters");
+      const parsedLetters = savedLetters ? JSON.parse(savedLetters) : [];
+
+      console.log("QR 생성 시 sessionStorage letters:", parsedLetters);
       const cardData = {
-        letters: selectedLetters.map((l) => ({
-          char: l.char,
-          imagePath: l.imagePath,
-        })),
+        letters: parsedLetters,
         signSize: signSize,
         layoutDirection: layoutDirection,
         userName: name,
