@@ -120,11 +120,30 @@ export default function SharedCard() {
                 <div className="text-center w-full">
                   {cardData.letters && cardData.letters.length > 0 ? (
                     <div className={`flex ${cardData.layoutDirection === "horizontal" ? "flex-wrap gap-4 justify-center" : "flex-col gap-2 items-center"}`}>
-                      {groupJamosByCharacter(cardData.letters.map((l) => ({ ...l, type: "consonant" as const, displayOrder: 1 }))).map((group, groupIndex) => (
+                      {(() => {
+                        console.log("렌더링 시 cardData.letters:", cardData.letters);
+                        const mappedLetters = cardData.letters.map((l) => ({ ...l, type: "consonant" as const, displayOrder: 1 }));
+                        console.log("매핑된 letters:", mappedLetters);
+                        const groupedLetters = groupJamosByCharacter(mappedLetters);
+                        console.log("그룹화된 letters:", groupedLetters);
+                        return groupedLetters;
+                      })().map((group, groupIndex) => (
                         <div key={groupIndex} className={`flex ${cardData.layoutDirection === "horizontal" ? "gap-2" : "gap-2"}`}>
                           {group.map((letter, letterIndex) => (
                             <div key={letterIndex} className="text-center">
-                              <img src={letter.imagePath} alt={letter.char} className="object-contain mx-auto" style={{ width: `${cardData.signSize * 4}px`, height: `${cardData.signSize * 4}px` }} />
+                              <img 
+                                src={letter.imagePath} 
+                                alt={letter.char} 
+                                className="object-contain mx-auto" 
+                                style={{ width: `${cardData.signSize * 4}px`, height: `${cardData.signSize * 4}px` }}
+                                onError={(e) => {
+                                  console.error("이미지 로드 실패:", letter.imagePath);
+                                  e.currentTarget.style.border = "2px solid red";
+                                }}
+                                onLoad={() => {
+                                  console.log("이미지 로드 성공:", letter.imagePath);
+                                }}
+                              />
                             </div>
                           ))}
                         </div>
