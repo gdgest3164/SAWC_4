@@ -6,13 +6,16 @@ import { put, list, del } from "@vercel/blob";
 async function cleanupOldCards() {
   try {
     const { blobs } = await list({ prefix: 'cards/' });
-    const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+    const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000); // 7일 전
     
     for (const blob of blobs) {
       // 파일명에서 timestamp 추출 (cards/{timestamp}.json)
       const match = blob.pathname.match(/cards\/([^.]+)\.json/);
       if (match) {
-        const timestamp = parseInt(match[1], 36) * 1000; // timestamp를 밀리초로 변환
+        const timestampStr = match[1];
+        const timestamp = parseInt(timestampStr, 36); // 36진법으로 파싱 (밀리초 단위)
+        
+        console.log(`파일 확인: ${blob.pathname}, timestamp: ${timestamp}, 7일전: ${sevenDaysAgo}`);
         
         if (timestamp < sevenDaysAgo) {
           await del(blob.url);
@@ -56,10 +59,7 @@ export async function action({ params, request }: ActionFunctionArgs) {
     console.log("저장 시도:", cardId);
     console.log("BLOB_TOKEN 존재:", !!process.env.BLOB_READ_WRITE_TOKEN);
 
-    // 10% 확률로 오래된 카드 정리
-    if (Math.random() < 0.1) {
-      cleanupOldCards(); // 백그라운드에서 실행
-    }
+    // 정리는 이제 Cron Job이 담당
 
     const blob = await put(`cards/${cardId}.json`, JSON.stringify(data), {
       access: "public",
