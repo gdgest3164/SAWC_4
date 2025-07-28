@@ -10,7 +10,7 @@ export const meta: MetaFunction = () => {
 };
 
 interface CardData {
-  letters: FingerLetter[];
+  letters: { char: string; imagePath: string }[];
   userName: string;
   signSize: number;
   layoutDirection: "horizontal" | "vertical";
@@ -120,7 +120,7 @@ export default function SharedCard() {
                 <div className="text-center w-full">
                   {cardData.letters && cardData.letters.length > 0 ? (
                     <div className={`flex ${cardData.layoutDirection === "horizontal" ? "flex-wrap gap-4 justify-center" : "flex-col gap-2 items-center"}`}>
-                      {groupJamosByCharacter(cardData.letters).map((group, groupIndex) => (
+                      {groupJamosByCharacter(cardData.letters.map(l => ({ ...l, type: 'consonant' as const, displayOrder: 1 }))).map((group, groupIndex) => (
                         <div key={groupIndex} className={`flex ${cardData.layoutDirection === "horizontal" ? "gap-2" : "gap-2"}`}>
                           {group.map((letter, letterIndex) => (
                             <div key={letterIndex} className="text-center">
