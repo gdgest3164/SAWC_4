@@ -60,10 +60,7 @@ export default function Preview() {
       // 명함 데이터를 URL 파라미터로 인코딩
       console.log("QR 생성 시 selectedLetters:", selectedLetters);
       const cardData = {
-        letters: selectedLetters.map((l) => ({
-          char: l.char,
-          imagePath: l.imagePath,
-        })),
+        letters: selectedLetters,
         signSize: signSize,
         layoutDirection: layoutDirection,
         userName: name,
