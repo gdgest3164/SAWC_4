@@ -10,7 +10,7 @@ export const meta: MetaFunction = () => {
 };
 
 interface CardData {
-  letters: FingerLetter[];
+  letters: { char: string; imagePath: string }[];
   userName: string;
   signSize: number;
   layoutDirection: "horizontal" | "vertical";
@@ -29,8 +29,11 @@ export default function SharedCard() {
   useEffect(() => {
     try {
       const data = searchParams.get("data");
+      console.log("SharedCard - 받은 data:", data);
       if (data) {
         const decodedData = JSON.parse(decodeURIComponent(data)) as CardData;
+        console.log("SharedCard - 파싱된 decodedData:", decodedData);
+        console.log("SharedCard - letters 배열:", decodedData.letters);
         setCardData(decodedData);
       } else {
         setError("명함 데이터가 없습니다.");
@@ -41,6 +44,33 @@ export default function SharedCard() {
     }
     setLoading(false);
   }, [searchParams]);
+
+  const saveAsImage = async () => {
+    if (!cardRef.current || !cardData) return;
+
+    setIsGenerating(true);
+
+    try {
+      const canvas = await html2canvas(cardRef.current, {
+        scale: 2,
+        backgroundColor: "#FFFFFF",
+        logging: false,
+      });
+
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const fileName = `지화명함_${cardData.userName}_${new Date().getTime()}.png`;
+          FileSaver.saveAs(blob, fileName);
+          setIsSaved(true);
+          setTimeout(() => setIsSaved(false), 3000);
+        }
+      });
+    } catch (error) {
+      console.error("이미지 저장 실패:", error);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -63,6 +93,9 @@ export default function SharedCard() {
           <div>
             <h1 className="text-2xl font-bold text-slate-800 mb-2">명함을 찾을 수 없습니다</h1>
             <p className="text-slate-600 mb-6">{error || "올바르지 않은 QR코드이거나 만료된 링크입니다."}</p>
+            <Link to="/" className="inline-block bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200">
+              새 명함 만들기
+            </Link>
           </div>
         </div>
       </div>
@@ -80,14 +113,14 @@ export default function SharedCard() {
 
         {/* 명함 */}
         <div className="flex justify-center">
-          <div className="bg-white border-2 border-indigo-200/50 rounded-2xl p-8 shadow-2xl" style={{ width: "600px", height: "340px" }}>
+          <div ref={cardRef} className="bg-white border-2 border-indigo-200/50 rounded-2xl p-8 shadow-2xl" style={{ width: "600px", height: "340px" }}>
             <div className="h-full flex flex-col">
               {/* 지화 이미지 영역 */}
               <div className="flex-1 flex items-center justify-center overflow-hidden">
                 <div className="text-center w-full">
                   {cardData.letters && cardData.letters.length > 0 ? (
                     <div className={`flex ${cardData.layoutDirection === "horizontal" ? "flex-wrap gap-4 justify-center" : "flex-col gap-2 items-center"}`}>
-                      {groupJamosByCharacter(cardData.letters).map((group, groupIndex) => (
+                      {groupJamosByCharacter(cardData.letters.map(l => ({ ...l, type: 'consonant' as const, displayOrder: 1 }))).map((group, groupIndex) => (
                         <div key={groupIndex} className={`flex ${cardData.layoutDirection === "horizontal" ? "gap-2" : "gap-2"}`}>
                           {group.map((letter, letterIndex) => (
                             <div key={letterIndex} className="text-center">
@@ -110,7 +143,7 @@ export default function SharedCard() {
 
               {/* 조합된 글자 */}
               <div className="text-center py-3 border-t-2 border-indigo-200 flex-shrink-0">
-                <p className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 drop-shadow-sm">{cardData.userName}</p>
+                <p className="text-2xl font-bold text-indigo-600">{cardData.userName}</p>
               </div>
 
               {/* 하단 정보 */}
@@ -123,12 +156,26 @@ export default function SharedCard() {
           </div>
         </div>
 
+        {/* 저장 버튼 */}
+        <div className="flex justify-center gap-3 mb-6">
+          <button
+            onClick={saveAsImage}
+            disabled={isGenerating}
+            className={`px-8 py-4 bg-gradient-to-r active:scale-95 transition-all duration-150 touch-manipulation min-h-[56px] min-w-[140px] border border-white/20 rounded-xl shadow-xl font-bold text-lg text-white ${
+              isSaved ? "from-green-500 to-green-600" : isGenerating ? "from-gray-400 to-gray-500 cursor-not-allowed" : "from-purple-600 to-pink-600 active:from-purple-700 active:to-pink-700"
+            }`}
+          >
+            {isSaved ? "저장 완료!" : isGenerating ? "저장 중..." : "명함 저장"}
+          </button>
+        </div>
+
         {/* 안내 메시지 */}
         <div className="text-center">
           <div className="inline-block bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 border-2 border-indigo-200/50 shadow-sm">
             <p className="text-slate-700 text-sm font-medium">
               <span className="text-purple-600 font-bold">서대문농아인복지관</span>에서 제공하는 지화 명함 서비스입니다
             </p>
+            {isSaved && <p className="text-green-600 text-sm font-medium mt-2">파일이 다운로드 폴더에 저장되었습니다!</p>}
           </div>
         </div>
       </div>

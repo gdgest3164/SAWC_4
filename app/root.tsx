@@ -30,20 +30,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
-        <style>{`
-          @media screen and (orientation: portrait) {
-            body {
-              transform: rotate(90deg);
-              transform-origin: left bottom;
-              width: 100vh;
-              height: 100vw;
-              overflow-x: hidden;
-              position: fixed;
-              top: 100%;
-              left: 0;
-            }
-          }
-        `}</style>
       </head>
       <body>
         {children}

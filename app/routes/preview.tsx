@@ -29,12 +29,15 @@ export default function Preview() {
     const savedSignSize = sessionStorage.getItem("signSize");
     const savedLayoutDirection = sessionStorage.getItem("layoutDirection");
 
+    console.log("Preview - sessionStorage letters:", letters);
+
     if (!letters) {
       navigate("/name-input");
       return;
     }
 
     const parsedLetters = JSON.parse(letters) as FingerLetter[];
+    console.log("Preview - parsedLetters:", parsedLetters);
     setSelectedLetters(parsedLetters);
 
     if (savedSignSize) {
@@ -55,6 +58,7 @@ export default function Preview() {
       const timestamp = new Date().getTime();
 
       // 명함 데이터를 URL 파라미터로 인코딩
+      console.log("QR 생성 시 selectedLetters:", selectedLetters);
       const cardData = {
         letters: selectedLetters,
         signSize: signSize,
@@ -62,6 +66,7 @@ export default function Preview() {
         userName: name,
         timestamp: timestamp,
       };
+      console.log("QR 생성 시 cardData:", cardData);
 
       const encodedData = encodeURIComponent(JSON.stringify(cardData));
       const url = `${window.location.origin}/card/shared?data=${encodedData}`;
@@ -219,6 +224,24 @@ export default function Preview() {
             >
               수정하기
             </button>
+
+            {/* <button
+              onClick={() => {
+                // 테스트용 직접 이동
+                const cardData = {
+                  letters: selectedLetters,
+                  signSize: signSize,
+                  layoutDirection: layoutDirection,
+                  userName: userName,
+                  timestamp: new Date().getTime(),
+                };
+                const encodedData = encodeURIComponent(JSON.stringify(cardData));
+                navigate(`/card/shared?data=${encodedData}`);
+              }}
+              className="px-12 py-6 bg-gradient-to-r from-yellow-600 to-orange-600 active:from-yellow-700 active:to-orange-700 text-white text-2xl font-bold rounded-xl shadow-xl active:scale-95 transition-all duration-150 touch-manipulation min-h-[64px] min-w-[160px] border border-white/20"
+            >
+              테스트
+            </button> */}
 
             <button
               onClick={() => navigate("/")}

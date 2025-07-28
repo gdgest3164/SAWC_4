@@ -68,15 +68,20 @@ export default function NameInput() {
   };
 
   const handleComplete = () => {
+    console.log("명함완성 클릭 - selectedLetters:", selectedLetters);
     if (selectedLetters.length > 0) {
       const letterData = selectedLetters.map((l) => ({
         char: l.char,
         imagePath: l.imagePath,
       }));
+      console.log("저장할 letterData:", letterData);
       sessionStorage.setItem("selectedLetters", JSON.stringify(letterData));
       sessionStorage.setItem("signSize", signSize.toString());
       sessionStorage.setItem("layoutDirection", layoutDirection);
       navigate("/preview");
+    } else {
+      console.log("선택된 지화가 없습니다!");
+      alert("지화를 선택해주세요!");
     }
   };
 
