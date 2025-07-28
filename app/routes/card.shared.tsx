@@ -74,9 +74,9 @@ export default function SharedCard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-teal-50 via-emerald-50 to-cyan-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-r from-indigo-400 to-purple-400 animate-pulse mx-auto mb-4"></div>
+          <div className="w-16 h-16 rounded-full bg-gradient-to-r from-teal-400 to-emerald-400 animate-pulse mx-auto mb-4"></div>
           <p className="text-lg text-slate-600 font-medium">명함을 불러오는 중...</p>
         </div>
       </div>
@@ -85,15 +85,15 @@ export default function SharedCard() {
 
   if (error || !cardData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-teal-50 via-emerald-50 to-cyan-50 flex items-center justify-center">
         <div className="text-center space-y-6">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-r from-red-400 to-pink-400 flex items-center justify-center mx-auto">
+          <div className="w-20 h-20 rounded-full bg-gradient-to-r from-red-400 to-orange-400 flex items-center justify-center mx-auto">
             <span className="text-2xl text-white">!</span>
           </div>
           <div>
             <h1 className="text-2xl font-bold text-slate-800 mb-2">명함을 찾을 수 없습니다</h1>
             <p className="text-slate-600 mb-6">{error || "올바르지 않은 QR코드이거나 만료된 링크입니다."}</p>
-            <Link to="/" className="inline-block bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200">
+            <Link to="/" className="inline-block bg-gradient-to-r from-teal-600 to-emerald-600 text-white px-8 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200">
               새 명함 만들기
             </Link>
           </div>
@@ -103,24 +103,24 @@ export default function SharedCard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-teal-50 via-emerald-50 to-cyan-50 flex items-center justify-center p-4">
       <div className="max-w-2xl w-full space-y-8">
         {/* 헤더 */}
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 mb-2">지화 명함</h1>
+          <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 mb-2">지화 명함</h1>
           <p className="text-slate-600 font-medium">QR코드로 공유된 디지털 명함입니다</p>
         </div>
 
         {/* 명함 */}
         <div className="flex justify-center">
-          <div ref={cardRef} className="bg-white border-2 border-indigo-200/50 rounded-2xl p-8 shadow-2xl" style={{ width: "600px", height: "340px" }}>
+          <div ref={cardRef} className="bg-white border-2 border-teal-200/50 rounded-2xl p-6 shadow-2xl" style={{ width: "600px", height: "340px" }}>
             <div className="h-full flex flex-col">
               {/* 지화 이미지 영역 */}
               <div className="flex-1 flex items-center justify-center overflow-hidden">
                 <div className="text-center w-full">
                   {cardData.letters && cardData.letters.length > 0 ? (
                     <div className={`flex ${cardData.layoutDirection === "horizontal" ? "flex-wrap gap-4 justify-center" : "flex-col gap-2 items-center"}`}>
-                      {groupJamosByCharacter(cardData.letters.map(l => ({ ...l, type: 'consonant' as const, displayOrder: 1 }))).map((group, groupIndex) => (
+                      {groupJamosByCharacter(cardData.letters.map((l) => ({ ...l, type: "consonant" as const, displayOrder: 1 }))).map((group, groupIndex) => (
                         <div key={groupIndex} className={`flex ${cardData.layoutDirection === "horizontal" ? "gap-2" : "gap-2"}`}>
                           {group.map((letter, letterIndex) => (
                             <div key={letterIndex} className="text-center">
@@ -131,19 +131,19 @@ export default function SharedCard() {
                       ))}
                     </div>
                   ) : (
-                    <div className="text-indigo-400 text-center">
-                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center mx-auto mb-4 shadow-lg border-2 border-indigo-200/50">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-400 to-purple-400"></div>
+                    <div className="text-teal-400 text-center">
+                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-teal-100 to-emerald-100 flex items-center justify-center mx-auto mb-4 shadow-lg border-2 border-teal-200/50">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-teal-400 to-emerald-400"></div>
                       </div>
-                      <p className="text-lg font-medium text-indigo-600">지화 명함</p>
+                      <p className="text-lg font-medium text-teal-600">지화 명함</p>
                     </div>
                   )}
                 </div>
               </div>
 
               {/* 조합된 글자 */}
-              <div className="text-center py-3 border-t-2 border-indigo-200 flex-shrink-0">
-                <p className="text-2xl font-bold text-indigo-600">{cardData.userName}</p>
+              <div className="text-center py-3 border-t-2 border-teal-200 flex-shrink-0">
+                <p className="text-2xl font-bold text-emerald-600">{cardData.userName}</p>
               </div>
 
               {/* 하단 정보 */}
@@ -162,7 +162,7 @@ export default function SharedCard() {
             onClick={saveAsImage}
             disabled={isGenerating}
             className={`px-8 py-4 bg-gradient-to-r active:scale-95 transition-all duration-150 touch-manipulation min-h-[56px] min-w-[140px] border border-white/20 rounded-xl shadow-xl font-bold text-lg text-white ${
-              isSaved ? "from-green-500 to-green-600" : isGenerating ? "from-gray-400 to-gray-500 cursor-not-allowed" : "from-purple-600 to-pink-600 active:from-purple-700 active:to-pink-700"
+              isSaved ? "from-green-500 to-green-600" : isGenerating ? "from-gray-400 to-gray-500 cursor-not-allowed" : "from-teal-600 to-emerald-600 active:from-teal-700 active:to-emerald-700"
             }`}
           >
             {isSaved ? "저장 완료!" : isGenerating ? "저장 중..." : "명함 저장"}
@@ -171,9 +171,9 @@ export default function SharedCard() {
 
         {/* 안내 메시지 */}
         <div className="text-center">
-          <div className="inline-block bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 border-2 border-indigo-200/50 shadow-sm">
+          <div className="inline-block bg-gradient-to-r from-teal-50 to-emerald-50 rounded-xl p-4 border-2 border-teal-200/50 shadow-sm">
             <p className="text-slate-700 text-sm font-medium">
-              <span className="text-purple-600 font-bold">서대문농아인복지관</span>에서 제공하는 지화 명함 서비스입니다
+              <span className="text-emerald-600 font-bold">서대문농아인복지관</span>에서 제공하는 지화 명함 서비스입니다
             </p>
             {isSaved && <p className="text-green-600 text-sm font-medium mt-2">파일이 다운로드 폴더에 저장되었습니다!</p>}
           </div>

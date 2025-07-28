@@ -86,14 +86,14 @@ export default function NameInput() {
   };
 
   return (
-    <div className="h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-4 flex flex-col overflow-hidden">
+    <div className="h-screen bg-gradient-to-br from-teal-50 via-emerald-50 to-cyan-50 p-4 flex flex-col overflow-hidden">
       <div className="w-full h-full flex flex-col">
         {/* 상단: 명함 미리보기 */}
-        <div className="bg-gradient-to-br from-white to-indigo-50 rounded-3xl shadow-xl border border-indigo-200/50 p-4 mb-3 flex-shrink-0 backdrop-blur-sm" style={{ height: "420px" }}>
+        <div className="bg-gradient-to-br from-white to-teal-50 rounded-3xl shadow-xl border border-teal-200/50 p-4 mb-3 flex-shrink-0 backdrop-blur-sm" style={{ height: "420px" }}>
           <div className="flex h-full gap-4">
             <div className="flex-1">
-              <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-4 h-full flex items-center justify-center border border-indigo-100">
-                <div className="bg-white border-2 border-indigo-200/50 rounded-2xl p-6 shadow-xl" style={{ width: "600px", height: "340px" }}>
+              <div className="bg-gradient-to-br from-teal-50 to-emerald-50 rounded-2xl p-4 h-full flex items-center justify-center border border-teal-100">
+                <div className="bg-white border-2 border-teal-200/50 rounded-2xl p-6 shadow-xl" style={{ width: "600px", height: "340px" }}>
                   <div className="h-full flex flex-col">
                     {/* 지화 이미지 영역 */}
                     <div className="flex-1 flex items-center justify-center overflow-hidden">
@@ -121,8 +121,8 @@ export default function NameInput() {
                     </div>
 
                     {/* 조합된 글자 */}
-                    <div className="text-center py-2 border-t-2 border-gradient-to-r from-indigo-200 via-purple-200 to-pink-200 flex-shrink-0">
-                      <p className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600">{combineJamos(selectedLetters) || "이름"}</p>
+                    <div className="text-center py-2 border-t-2 border-teal-200 flex-shrink-0">
+                      <p className="text-xl font-bold text-emerald-600">{combineJamos(selectedLetters) || "이름"}</p>
                     </div>
 
                     {/* 하단 정보 */}
@@ -195,7 +195,7 @@ export default function NameInput() {
                     <button
                       onClick={() => setLayoutDirection("horizontal")}
                       className={`flex-1 px-3 py-2 text-sm font-medium rounded active:scale-95 transition-all touch-manipulation min-h-[40px] ${
-                        layoutDirection === "horizontal" ? "bg-purple-500 active:bg-purple-600 text-white" : "bg-white text-purple-500 border border-purple-500 active:bg-purple-50"
+                        layoutDirection === "horizontal" ? "bg-emerald-500 active:bg-emerald-600 text-white" : "bg-white text-emerald-500 border border-emerald-500 active:bg-emerald-50"
                       }`}
                     >
                       가로
@@ -203,7 +203,7 @@ export default function NameInput() {
                     <button
                       onClick={() => setLayoutDirection("vertical")}
                       className={`flex-1 px-3 py-2 text-sm font-medium rounded active:scale-95 transition-all touch-manipulation min-h-[40px] ${
-                        layoutDirection === "vertical" ? "bg-purple-500 active:bg-purple-600 text-white" : "bg-white text-purple-500 border border-purple-500 active:bg-purple-50"
+                        layoutDirection === "vertical" ? "bg-emerald-500 active:bg-emerald-600 text-white" : "bg-white text-emerald-500 border border-emerald-500 active:bg-emerald-50"
                       }`}
                     >
                       세로
@@ -235,13 +235,13 @@ export default function NameInput() {
             </div>
 
             <div className="flex-1">
-              <h3 className="text-base font-medium mb-2 text-center bg-purple-500 text-white rounded-lg p-2">모음</h3>
+              <h3 className="text-base font-medium mb-2 text-center bg-emerald-500 text-white rounded-lg p-2">모음</h3>
               <div className="grid grid-cols-5 gap-2">
                 {vowels.map((letter) => (
                   <button
                     key={letter.char}
                     onClick={() => handleLetterClick(letter)}
-                    className="p-1 bg-purple-500 active:bg-purple-600 rounded-lg shadow-md active:scale-95 transition-all duration-150 touch-manipulation min-h-[72px] flex flex-col items-center justify-center"
+                    className="p-1 bg-emerald-500 active:bg-emerald-600 rounded-lg shadow-md active:scale-95 transition-all duration-150 touch-manipulation min-h-[72px] flex flex-col items-center justify-center"
                   >
                     <img src={letter.imagePath} alt={letter.char} className="w-16 h-16 object-contain mx-auto" />
                     <p className="text-base font-medium mt-1 text-center text-white">{letter.char}</p>
