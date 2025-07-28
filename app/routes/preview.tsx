@@ -53,8 +53,18 @@ export default function Preview() {
   const generateQRCode = async (name: string) => {
     try {
       const timestamp = new Date().getTime();
-      const cardId = `${name}-${timestamp}`;
-      const url = `${window.location.origin}/card/${cardId}`;
+
+      // 명함 데이터를 URL 파라미터로 인코딩
+      const cardData = {
+        letters: selectedLetters,
+        signSize: signSize,
+        layoutDirection: layoutDirection,
+        userName: name,
+        timestamp: timestamp,
+      };
+
+      const encodedData = encodeURIComponent(JSON.stringify(cardData));
+      const url = `${window.location.origin}/card/shared?data=${encodedData}`;
 
       const qrDataUrl = await QRCode.toDataURL(url, {
         width: 200,
@@ -130,7 +140,9 @@ export default function Preview() {
       <div className="w-full h-full flex flex-col">
         <div className="text-center mb-4 flex-shrink-0">
           <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 mb-3 drop-shadow-sm">지화 명함 완성</h1>
-          <p className="text-xl text-slate-700 font-medium">명함을 확인하고 <span className="text-purple-600 font-bold">QR코드를 활용</span>하세요</p>
+          <p className="text-xl text-slate-700 font-medium">
+            명함을 확인하고 <span className="text-purple-600 font-bold">QR코드를 활용</span>하세요
+          </p>
         </div>
 
         <div className="bg-gradient-to-br from-white to-indigo-50 rounded-3xl shadow-xl border border-indigo-200/50 p-4 flex-1 flex flex-col backdrop-blur-sm">
@@ -178,14 +190,16 @@ export default function Preview() {
                 <h3 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 mb-2">QR 코드</h3>
                 <p className="text-base text-slate-600 font-medium">디지털 명함으로 활용하세요</p>
               </div>
-              
+
               <div ref={qrRef} className="bg-white border-2 border-purple-200/50 rounded-2xl p-4 shadow-xl flex flex-col items-center" style={{ width: "200px", height: "220px" }}>
                 {qrCodeUrl ? (
                   <>
                     <img src={qrCodeUrl} alt="QR Code" className="w-28 h-28 rounded-xl shadow-lg border-2 border-indigo-200/50 mb-3" />
                     <p className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 text-center mb-2">{userName}님의 지화 명함</p>
                     <p className="text-xs text-slate-600 text-center leading-tight font-medium">
-                      QR코드를 스캔하여<br />디지털 명함을 확인하세요
+                      QR코드를 스캔하여
+                      <br />
+                      디지털 명함을 확인하세요
                     </p>
                   </>
                 ) : (
@@ -205,7 +219,7 @@ export default function Preview() {
             >
               수정하기
             </button>
-            
+
             <button
               onClick={() => navigate("/")}
               className="px-12 py-6 bg-gradient-to-r from-green-600 to-emerald-600 active:from-green-700 active:to-emerald-700 text-white text-2xl font-bold rounded-xl shadow-xl active:scale-95 transition-all duration-150 touch-manipulation min-h-[64px] min-w-[180px] border border-white/20"
