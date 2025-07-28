@@ -28,12 +28,36 @@ export default function SharedCard() {
 
   useEffect(() => {
     try {
+      // 새로운 방식: id로 localStorage에서 데이터 가져오기
+      const id = searchParams.get("id");
       const data = searchParams.get("data");
+      
+      console.log("SharedCard - 받은 id:", id);
       console.log("SharedCard - 받은 data:", data);
-      if (data) {
+      
+      if (id) {
+        // 새로운 방식: 서버에서 데이터 가져오기
+        fetch(`/api/card/${id}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.error) {
+              setError(data.error);
+            } else {
+              console.log("SharedCard - 서버에서 가져온 데이터:", data);
+              setCardData(data);
+            }
+            setLoading(false);
+          })
+          .catch(err => {
+            console.error("서버 데이터 로드 실패:", err);
+            setError("명함 데이터를 불러올 수 없습니다.");
+            setLoading(false);
+          });
+        return;
+      } else if (data) {
+        // 기존 방식: URL 파라미터에서 데이터 가져오기 (호환성)
         const decodedData = JSON.parse(decodeURIComponent(data)) as CardData;
-        console.log("SharedCard - 파싱된 decodedData:", decodedData);
-        console.log("SharedCard - letters 배열:", decodedData.letters);
+        console.log("SharedCard - URL에서 가져온 데이터:", decodedData);
         setCardData(decodedData);
       } else {
         setError("명함 데이터가 없습니다.");

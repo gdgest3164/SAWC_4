@@ -50,7 +50,24 @@ export default function Preview() {
 
     const combinedName = combineJamos(parsedLetters);
     setUserName(combinedName);
-    generateQRCode(combinedName);
+
+    // 기존 QR 코드가 있는지 확인
+    const existingQRId = sessionStorage.getItem("currentQRId");
+    if (existingQRId) {
+      // 기존 QR 코드 재사용
+      const url = `${window.location.origin}/card/shared?id=${existingQRId}`;
+      QRCode.toDataURL(url, {
+        width: 200,
+        margin: 2,
+        color: {
+          dark: "#000000",
+          light: "#FFFFFF",
+        },
+      }).then(setQrCodeUrl);
+    } else {
+      // 새로운 QR 코드 생성
+      generateQRCode(combinedName);
+    }
   }, [navigate]);
 
   const generateQRCode = async (name: string) => {
@@ -71,8 +88,20 @@ export default function Preview() {
       };
       console.log("QR 생성 시 cardData:", cardData);
 
-      const encodedData = encodeURIComponent(JSON.stringify(cardData));
-      const url = `${window.location.origin}/card/shared?data=${encodedData}`;
+      // 짧은 ID 생성 (timestamp 기반)
+      const shortId = timestamp.toString(36);
+
+      // 서버에 데이터 저장
+      await fetch(`/api/card/${shortId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(cardData),
+      });
+
+      // QR ID를 sessionStorage에 저장
+      sessionStorage.setItem("currentQRId", shortId);
+
+      const url = `${window.location.origin}/card/shared?id=${shortId}`;
 
       const qrDataUrl = await QRCode.toDataURL(url, {
         width: 200,
