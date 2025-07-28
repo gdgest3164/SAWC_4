@@ -67,18 +67,48 @@ export default function NameInput() {
     setSelectedLetters([]);
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     console.log("명함완성 클릭 - selectedLetters:", selectedLetters);
     if (selectedLetters.length > 0) {
       const letterData = selectedLetters.map((l) => ({
         char: l.char,
         imagePath: l.imagePath,
       }));
-      console.log("저장할 letterData:", letterData);
-      sessionStorage.setItem("selectedLetters", JSON.stringify(letterData));
-      sessionStorage.setItem("signSize", signSize.toString());
-      sessionStorage.setItem("layoutDirection", layoutDirection);
-      navigate("/preview");
+      
+      // Blob에 저장할 카드 데이터
+      const cardData = {
+        letters: letterData,
+        signSize: signSize,
+        layoutDirection: layoutDirection,
+        userName: combineJamos(selectedLetters),
+        timestamp: new Date().getTime(),
+      };
+      
+      // 짧은 ID 생성
+      const shortId = cardData.timestamp.toString(36);
+      
+      try {
+        // Vercel Blob에 저장
+        const response = await fetch(`/api/card/${shortId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(cardData),
+        });
+        
+        if (response.ok) {
+          // 성공시 sessionStorage에도 저장 (preview 페이지에서 사용)
+          sessionStorage.setItem("selectedLetters", JSON.stringify(letterData));
+          sessionStorage.setItem("signSize", signSize.toString());
+          sessionStorage.setItem("layoutDirection", layoutDirection);
+          sessionStorage.setItem("currentQRId", shortId);
+          navigate("/preview");
+        } else {
+          alert("명함 저장에 실패했습니다.");
+        }
+      } catch (error) {
+        console.error("저장 실패:", error);
+        alert("명함 저장에 실패했습니다.");
+      }
     } else {
       console.log("선택된 지화가 없습니다!");
       alert("지화를 선택해주세요!");

@@ -91,7 +91,7 @@ export default function Preview() {
       // 짧은 ID 생성 (timestamp 기반)
       const shortId = timestamp.toString(36);
 
-      // 서버에 데이터 저장
+      // Vercel Blob에 데이터 저장
       await fetch(`/api/card/${shortId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
