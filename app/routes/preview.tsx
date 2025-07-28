@@ -126,19 +126,19 @@ export default function Preview() {
   };
 
   return (
-    <div className="h-screen bg-gray-100 p-4 flex flex-col overflow-hidden">
+    <div className="h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-4 flex flex-col overflow-hidden">
       <div className="w-full h-full flex flex-col">
         <div className="text-center mb-4 flex-shrink-0">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">🎉 지화 명함 완성!</h1>
-          <p className="text-lg text-gray-600">명함을 확인하고 QR코드를 활용하세요</p>
+          <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 mb-3 drop-shadow-sm">지화 명함 완성</h1>
+          <p className="text-xl text-slate-700 font-medium">명함을 확인하고 <span className="text-purple-600 font-bold">QR코드를 활용</span>하세요</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg p-4 flex-1 flex flex-col">
+        <div className="bg-gradient-to-br from-white to-indigo-50 rounded-3xl shadow-xl border border-indigo-200/50 p-4 flex-1 flex flex-col backdrop-blur-sm">
           {/* 명함과 QR코드 */}
           <div className="flex gap-4 mb-4 flex-1 items-center">
             {/* 명함 */}
             <div className="flex-1 flex justify-center">
-              <div ref={cardRef} className="bg-white border-2 border-gray-300 rounded-2xl p-6 shadow-lg" style={{ width: "600px", height: "340px" }}>
+              <div ref={cardRef} className="bg-white border-2 border-indigo-200/50 rounded-2xl p-6 shadow-xl" style={{ width: "600px", height: "340px" }}>
                 <div className="h-full flex flex-col">
                   {/* 지화 이미지 영역 */}
                   <div className="flex-1 flex items-center justify-center overflow-hidden">
@@ -158,8 +158,8 @@ export default function Preview() {
                   </div>
 
                   {/* 조합된 글자 */}
-                  <div className="text-center py-2 border-t border-gray-200 flex-shrink-0">
-                    <p className="text-lg font-bold text-gray-900">{userName}</p>
+                  <div className="text-center py-3 border-t-2 border-indigo-200 flex-shrink-0">
+                    <p className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 drop-shadow-sm">{userName}</p>
                   </div>
 
                   {/* 하단 정보 */}
@@ -175,22 +175,22 @@ export default function Preview() {
             {/* QR 코드 */}
             <div className="flex flex-col justify-center items-center" style={{ width: "260px" }}>
               <div className="text-center mb-3">
-                <h3 className="text-lg font-bold text-gray-900 mb-1">📱 QR 코드</h3>
-                <p className="text-sm text-gray-600">디지털 명함으로 활용하세요</p>
+                <h3 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 mb-2">QR 코드</h3>
+                <p className="text-base text-slate-600 font-medium">디지털 명함으로 활용하세요</p>
               </div>
               
-              <div ref={qrRef} className="bg-white border-2 border-gray-300 rounded-2xl p-4 shadow-lg flex flex-col items-center" style={{ width: "200px", height: "220px" }}>
+              <div ref={qrRef} className="bg-white border-2 border-purple-200/50 rounded-2xl p-4 shadow-xl flex flex-col items-center" style={{ width: "200px", height: "220px" }}>
                 {qrCodeUrl ? (
                   <>
-                    <img src={qrCodeUrl} alt="QR Code" className="w-28 h-28 rounded-lg shadow-sm border border-gray-200 mb-2" />
-                    <p className="text-xs font-bold text-gray-700 text-center mb-1">{userName}님의 지화 명함</p>
-                    <p className="text-xs text-gray-500 text-center leading-tight">
+                    <img src={qrCodeUrl} alt="QR Code" className="w-28 h-28 rounded-xl shadow-lg border-2 border-indigo-200/50 mb-3" />
+                    <p className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 text-center mb-2">{userName}님의 지화 명함</p>
+                    <p className="text-xs text-slate-600 text-center leading-tight font-medium">
                       QR코드를 스캔하여<br />디지털 명함을 확인하세요
                     </p>
                   </>
                 ) : (
                   <div className="flex items-center justify-center h-full">
-                    <p className="text-gray-500 text-sm">QR 생성 중...</p>
+                    <p className="text-slate-500 text-sm font-medium">QR 생성 중...</p>
                   </div>
                 )}
               </div>
@@ -201,24 +201,24 @@ export default function Preview() {
           <div className="flex justify-center gap-4 mb-3 flex-shrink-0">
             <button
               onClick={() => navigate("/name-input")}
-              className="px-8 py-4 bg-blue-600 text-white text-xl font-bold rounded-xl shadow-md active:scale-95 active:shadow-sm transition-all duration-150 touch-manipulation"
+              className="px-12 py-6 bg-gradient-to-r from-blue-600 to-indigo-600 active:from-blue-700 active:to-indigo-700 text-white text-2xl font-bold rounded-xl shadow-xl active:scale-95 transition-all duration-150 touch-manipulation min-h-[64px] min-w-[160px] border border-white/20"
             >
-              ✏️ 수정하기
+              수정하기
             </button>
             
             <button
               onClick={() => navigate("/")}
-              className="px-8 py-4 bg-green-600 text-white text-xl font-bold rounded-xl shadow-md active:scale-95 active:shadow-sm transition-all duration-150 touch-manipulation"
+              className="px-12 py-6 bg-gradient-to-r from-green-600 to-emerald-600 active:from-green-700 active:to-emerald-700 text-white text-2xl font-bold rounded-xl shadow-xl active:scale-95 transition-all duration-150 touch-manipulation min-h-[64px] min-w-[180px] border border-white/20"
             >
-              ✨ 새로 만들기
+              새로 만들기
             </button>
           </div>
 
           {/* 간단한 안내 메시지 */}
           <div className="text-center flex-shrink-0">
-            <div className="inline-block bg-blue-50 rounded-xl p-3 border border-blue-200">
-              <p className="text-blue-700 text-sm font-medium">
-                📱 스마트폰으로 QR코드를 촬영하여 디지털 명함을 확인하세요!
+            <div className="inline-block bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 border-2 border-indigo-200/50 shadow-sm">
+              <p className="text-slate-700 text-base font-bold">
+                스마트폰으로 <span className="text-purple-600">QR코드를 촬영</span>하여 디지털 명함을 확인하세요
               </p>
             </div>
           </div>
