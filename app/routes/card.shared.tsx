@@ -31,15 +31,15 @@ export default function SharedCard() {
       // 새로운 방식: id로 localStorage에서 데이터 가져오기
       const id = searchParams.get("id");
       const data = searchParams.get("data");
-      
+
       console.log("SharedCard - 받은 id:", id);
       console.log("SharedCard - 받은 data:", data);
-      
+
       if (id) {
         // 새로운 방식: 서버에서 데이터 가져오기
         fetch(`/api/card/${id}`)
-          .then(res => res.json())
-          .then(data => {
+          .then((res) => res.json())
+          .then((data) => {
             if (data.error) {
               setError(data.error);
             } else {
@@ -48,7 +48,7 @@ export default function SharedCard() {
             }
             setLoading(false);
           })
-          .catch(err => {
+          .catch((err) => {
             console.error("서버 데이터 로드 실패:", err);
             setError("명함 데이터를 불러올 수 없습니다.");
             setLoading(false);
@@ -114,13 +114,6 @@ export default function SharedCard() {
           <div className="w-20 h-20 rounded-full bg-gradient-to-r from-red-400 to-orange-400 flex items-center justify-center mx-auto">
             <span className="text-2xl text-white">!</span>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-800 mb-2">명함을 찾을 수 없습니다</h1>
-            <p className="text-slate-600 mb-6">{error || "올바르지 않은 QR코드이거나 만료된 링크입니다."}</p>
-            <Link to="/" className="inline-block bg-gradient-to-r from-teal-600 to-emerald-600 text-white px-8 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200">
-              새 명함 만들기
-            </Link>
-          </div>
         </div>
       </div>
     );
@@ -144,14 +137,14 @@ export default function SharedCard() {
                 <div className="text-center w-full">
                   {cardData.letters && cardData.letters.length > 0 ? (
                     <div className={`flex ${cardData.layoutDirection === "horizontal" ? "flex-wrap gap-4 justify-center" : "flex-col gap-2 items-center"}`}>
-                      {groupJamosByCharacter(cardData.letters.map(l => ({ ...l, type: 'consonant' as const, displayOrder: 1 }))).map((group, groupIndex) => (
+                      {groupJamosByCharacter(cardData.letters.map((l) => ({ ...l, type: "consonant" as const, displayOrder: 1 }))).map((group, groupIndex) => (
                         <div key={groupIndex} className={`flex ${cardData.layoutDirection === "horizontal" ? "gap-2" : "gap-2"}`}>
                           {group.map((letter, letterIndex) => (
                             <div key={letterIndex} className="text-center">
-                              <img 
-                                src={letter.imagePath} 
-                                alt={letter.char} 
-                                className="object-contain mx-auto" 
+                              <img
+                                src={letter.imagePath}
+                                alt={letter.char}
+                                className="object-contain mx-auto"
                                 style={{ width: `${cardData.signSize * 4}px`, height: `${cardData.signSize * 4}px` }}
                                 onError={(e) => {
                                   console.error("이미지 로드 실패:", letter.imagePath);

@@ -257,7 +257,7 @@ export default function Preview() {
               수정하기
             </button>
 
-            <button
+            {/* <button
               onClick={() => {
                 // 테스트용 직접 이동 - QR과 동일한 구조
                 const cardData = {
@@ -277,7 +277,7 @@ export default function Preview() {
               className="px-12 py-6 bg-gradient-to-r from-yellow-600 to-orange-600 active:from-yellow-700 active:to-orange-700 text-white text-2xl font-bold rounded-xl shadow-xl active:scale-95 transition-all duration-150 touch-manipulation min-h-[64px] min-w-[160px] border border-white/20"
             >
               테스트
-            </button>
+            </button> */}
 
             <button
               onClick={() => navigate("/")}
