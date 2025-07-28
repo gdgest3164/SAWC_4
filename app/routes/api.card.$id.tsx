@@ -9,18 +9,12 @@ async function cleanupOldCards() {
     const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000); // 7일 전
     
     for (const blob of blobs) {
-      // 파일명에서 timestamp 추출 (cards/{timestamp}.json)
-      const match = blob.pathname.match(/cards\/([^.]+)\.json/);
-      if (match) {
-        const timestampStr = match[1];
-        const timestamp = parseInt(timestampStr, 36); // 36진법으로 파싱 (밀리초 단위)
-        
-        console.log(`파일 확인: ${blob.pathname}, timestamp: ${timestamp}, 7일전: ${sevenDaysAgo}`);
-        
-        if (timestamp < sevenDaysAgo) {
-          await del(blob.url);
-          console.log(`삭제된 카드: ${blob.pathname}`);
-        }
+      // 파일 생성일자 기준으로 삭제 (uploadedAt 사용)
+      const fileCreatedAt = new Date(blob.uploadedAt).getTime();
+      
+      if (fileCreatedAt < sevenDaysAgo) {
+        await del(blob.url);
+        console.log(`삭제된 카드: ${blob.pathname} (생성일: ${blob.uploadedAt})`);
       }
     }
   } catch (error) {

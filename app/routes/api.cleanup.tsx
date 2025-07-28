@@ -16,17 +16,15 @@ export async function action({ request }: ActionFunctionArgs) {
     let deletedCount = 0;
     
     for (const blob of blobs) {
-      // 파일명에서 timestamp 추출 (cards/{timestamp}.json)
-      const match = blob.pathname.match(/cards\/([^.]+)\.json/);
-      if (match) {
-        const timestampStr = match[1];
-        const timestamp = parseInt(timestampStr, 36);
-        
-        if (timestamp < sevenDaysAgo) {
-          await del(blob.url);
-          deletedCount++;
-          console.log(`삭제된 카드: ${blob.pathname}`);
-        }
+      // 파일 생성일자 기준으로 삭제 (uploadedAt 사용)
+      const fileCreatedAt = new Date(blob.uploadedAt).getTime();
+      
+      console.log(`파일 확인: ${blob.pathname}, 생성일: ${blob.uploadedAt}, 7일전: ${new Date(sevenDaysAgo).toISOString()}`);
+      
+      if (fileCreatedAt < sevenDaysAgo) {
+        await del(blob.url);
+        deletedCount++;
+        console.log(`삭제된 카드: ${blob.pathname} (생성일: ${blob.uploadedAt})`);
       }
     }
 
