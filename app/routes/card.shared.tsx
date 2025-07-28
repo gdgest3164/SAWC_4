@@ -114,6 +114,10 @@ export default function SharedCard() {
           <div className="w-20 h-20 rounded-full bg-gradient-to-r from-red-400 to-orange-400 flex items-center justify-center mx-auto">
             <span className="text-2xl text-white">!</span>
           </div>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800 mb-2">명함을 찾을 수 없습니다</h1>
+            <p className="text-slate-600 mb-6">올바르지 않은 QR코드이거나 만료된 링크입니다.</p>
+          </div>
         </div>
       </div>
     );
