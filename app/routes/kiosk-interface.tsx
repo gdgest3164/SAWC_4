@@ -3,6 +3,7 @@ import { useNavigate } from "@remix-run/react";
 import type { MetaFunction } from "@remix-run/node";
 import { consonants, vowels, type FingerLetter, combineJamos } from "~/utils/fingerLetters";
 import BusinessCard from "~/components/BusinessCard";
+import QRCode from "qrcode";
 
 export const meta: MetaFunction = () => {
   return [{ title: "지화 명함 키오스크" }, { name: "description", content: "가로화면 터치스크린 키오스크 인터페이스" }];
@@ -49,10 +50,11 @@ const numbers = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "*", "0", "#"];
 
 export default function KioskInterface() {
   const navigate = useNavigate();
-  const [step, setStep] = useState(1); // 1: 이름, 2: 연락처, 3: 디자인, 4: 완성
+  const [step, setStep] = useState(1); // 1: 이름, 2: 연락처, 3: 디자인, 4: 완성, 5: QR코드 표시
   const [selectedLetters, setSelectedLetters] = useState<FingerLetter[]>([]);
   const [phoneNumber, setPhoneNumber] = useState("");
   const [selectedDesign, setSelectedDesign] = useState(cardDesigns[0]);
+  const [qrCodeUrl, setQrCodeUrl] = useState("");
 
   const handleLetterClick = (letter: FingerLetter) => {
     setSelectedLetters([...selectedLetters, letter]);
@@ -109,11 +111,24 @@ export default function KioskInterface() {
       });
 
       if (response.ok) {
+        // QR 코드 생성
+        const url = `${window.location.origin}/card/shared?id=${shortId}`;
+        const qrDataUrl = await QRCode.toDataURL(url, {
+          width: 200,
+          margin: 2,
+          color: {
+            dark: "#000000",
+            light: "#FFFFFF",
+          },
+        });
+        
+        setQrCodeUrl(qrDataUrl);
+        setStep(5); // QR 코드 표시 단계로 이동
+        
         sessionStorage.setItem("selectedLetters", JSON.stringify(cardData.letters));
         sessionStorage.setItem("phoneNumber", phoneNumber);
         sessionStorage.setItem("selectedDesign", JSON.stringify(selectedDesign));
         sessionStorage.setItem("currentQRId", shortId);
-        navigate("/preview");
       }
     } catch (error) {
       console.error("저장 실패:", error);
@@ -132,7 +147,7 @@ export default function KioskInterface() {
         </button>
         
         <div className="flex items-center gap-8">
-          {[1, 2, 3, 4].map((num) => (
+          {[1, 2, 3, 4, 5].map((num) => (
             <div key={num} className="flex items-center">
               <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg ${
                 step >= num ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-500"
@@ -140,9 +155,9 @@ export default function KioskInterface() {
                 {num}
               </div>
               <span className={`ml-3 font-medium ${step >= num ? "text-blue-600" : "text-gray-400"}`}>
-                {num === 1 ? "이름" : num === 2 ? "연락처" : num === 3 ? "디자인" : "완성"}
+                {num === 1 ? "이름" : num === 2 ? "연락처" : num === 3 ? "디자인" : num === 4 ? "완성" : "QR코드"}
               </span>
-              {num < 4 && <div className={`w-16 h-1 ml-8 ${step > num ? "bg-blue-500" : "bg-gray-200"}`} />}
+              {num < 5 && <div className={`w-16 h-1 ml-8 ${step > num ? "bg-blue-500" : "bg-gray-200"}`} />}
             </div>
           ))}
         </div>
@@ -284,13 +299,36 @@ export default function KioskInterface() {
             </>
           )}
 
+          {step === 5 && (
+            <>
+              <h2 className="text-3xl font-bold text-center text-gray-800 mb-8">QR코드가 생성되었습니다!</h2>
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="bg-white rounded-2xl p-8 shadow-xl border-2 border-gray-200 mb-6">
+                    <img src={qrCodeUrl} alt="QR Code" className="w-48 h-48 mx-auto rounded-xl" />
+                  </div>
+                  <p className="text-xl text-gray-600 font-medium mb-4">
+                    스마트폰으로 QR코드를 촬영하여<br/>
+                    디지털 명함을 확인하세요
+                  </p>
+                  <button
+                    onClick={() => navigate("/")}
+                    className="px-12 py-6 bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-2xl font-bold rounded-xl shadow-xl active:scale-95 transition-all touch-manipulation"
+                  >
+                    홈화면으로
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+
           {/* 하단 컨트롤 */}
           <div className="flex justify-between gap-6 mt-8">
             <button
               onClick={handleDelete}
-              disabled={step === 3 || step === 4}
+              disabled={step === 3 || step === 4 || step === 5}
               className={`px-8 py-4 rounded-xl font-bold text-xl transition-all touch-manipulation min-h-[72px] min-w-[120px] ${
-                step === 3 || step === 4
+                step === 3 || step === 4 || step === 5
                   ? "bg-gray-300 text-gray-500"
                   : "bg-red-500 text-white active:scale-95"
               }`}
@@ -299,7 +337,7 @@ export default function KioskInterface() {
             </button>
 
             <div className="flex gap-4">
-              {step > 1 && (
+              {step > 1 && step < 5 && (
                 <button
                   onClick={handlePrev}
                   className="px-8 py-4 bg-gray-500 text-white rounded-xl font-bold text-xl active:scale-95 transition-all touch-manipulation min-h-[72px] min-w-[120px]"
