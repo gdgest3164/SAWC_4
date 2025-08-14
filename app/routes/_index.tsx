@@ -38,7 +38,7 @@ export default function Index() {
           </p>
         </div>
 
-        <Link to="/name-input" onClick={handleStartClick} className={`inline-block transition-all duration-1000 delay-500 ${isVisible ? "opacity-100 scale-100" : "opacity-0 scale-90"}`}>
+        <Link to="/kiosk-interface" onClick={handleStartClick} className={`inline-block transition-all duration-1000 delay-500 ${isVisible ? "opacity-100 scale-100" : "opacity-0 scale-90"}`}>
           <button className="group relative bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 active:from-teal-700 active:via-emerald-700 active:to-cyan-700 text-white text-3xl font-bold py-16 px-32 rounded-2xl shadow-2xl active:scale-95 active:shadow-xl transition-all duration-200 touch-manipulation min-h-[120px] min-w-[320px] border border-white/20 overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-active:opacity-100 transition-opacity duration-200"></div>
             <span className="relative z-10 drop-shadow-sm">터치하여 시작하기</span>

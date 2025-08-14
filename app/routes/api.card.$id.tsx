@@ -2,7 +2,8 @@ import { json } from "@remix-run/node";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { put, list, del } from "@vercel/blob";
 
-// 7일 이상 된 파일 삭제
+// 7일 이상 된 파일 삭제 (현재 사용하지 않음)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function cleanupOldCards() {
   try {
     const { blobs } = await list({ prefix: 'cards/' });

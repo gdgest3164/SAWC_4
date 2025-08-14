@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "@remix-run/react";
 import type { MetaFunction } from "@remix-run/node";
 import { consonants, vowels, type FingerLetter, combineJamos, groupJamosByCharacter } from "~/utils/fingerLetters";
+import BusinessCard from "~/components/BusinessCard";
 
 export const meta: MetaFunction = () => {
   return [{ title: "지화로 이름 만들기" }, { name: "description", content: "지화를 터치하여 이름을 만들어보세요" }];
@@ -67,53 +68,6 @@ export default function NameInput() {
     setSelectedLetters([]);
   };
 
-  const handleComplete = async () => {
-    console.log("명함완성 클릭 - selectedLetters:", selectedLetters);
-    if (selectedLetters.length > 0) {
-      const letterData = selectedLetters.map((l) => ({
-        char: l.char,
-        imagePath: l.imagePath,
-      }));
-      
-      // Blob에 저장할 카드 데이터
-      const cardData = {
-        letters: letterData,
-        signSize: signSize,
-        layoutDirection: layoutDirection,
-        userName: combineJamos(selectedLetters),
-        timestamp: new Date().getTime(),
-      };
-      
-      // 짧은 ID 생성
-      const shortId = cardData.timestamp.toString(36);
-      
-      try {
-        // Vercel Blob에 저장
-        const response = await fetch(`/api/card/${shortId}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(cardData),
-        });
-        
-        if (response.ok) {
-          // 성공시 sessionStorage에도 저장 (preview 페이지에서 사용)
-          sessionStorage.setItem("selectedLetters", JSON.stringify(letterData));
-          sessionStorage.setItem("signSize", signSize.toString());
-          sessionStorage.setItem("layoutDirection", layoutDirection);
-          sessionStorage.setItem("currentQRId", shortId);
-          navigate("/preview");
-        } else {
-          alert("명함 저장에 실패했습니다.");
-        }
-      } catch (error) {
-        console.error("저장 실패:", error);
-        alert("명함 저장에 실패했습니다.");
-      }
-    } else {
-      console.log("선택된 지화가 없습니다!");
-      alert("지화를 선택해주세요!");
-    }
-  };
 
   return (
     <div className="h-screen bg-gradient-to-br from-teal-50 via-emerald-50 to-cyan-50 p-4 flex flex-col overflow-hidden">
@@ -123,46 +77,25 @@ export default function NameInput() {
           <div className="flex h-full gap-4">
             <div className="flex-1">
               <div className="bg-gradient-to-br from-teal-50 to-emerald-50 rounded-2xl p-4 h-full flex items-center justify-center border border-teal-100">
-                <div className="bg-white border-2 border-teal-200/50 rounded-2xl p-6 shadow-xl" style={{ width: "600px", height: "340px" }}>
-                  <div className="h-full flex flex-col">
-                    {/* 지화 이미지 영역 */}
-                    <div className="flex-1 flex items-center justify-center overflow-hidden">
-                      <div className="text-center w-full">
-                        <div className={`flex ${layoutDirection === "horizontal" ? "flex-wrap gap-4 justify-center" : "flex-col gap-2 items-center"}`}>
-                          {groupJamosByCharacter(selectedLetters).map((group, groupIndex) => (
-                            <div key={groupIndex} className={`flex ${layoutDirection === "horizontal" ? "gap-2" : "gap-2"}`}>
-                              {group.map((letter, letterIndex) => (
-                                <div key={letterIndex} className="text-center">
-                                  <img src={letter.imagePath} alt={letter.char} className="object-contain mx-auto" style={{ width: `${signSize * 4}px`, height: `${signSize * 4}px` }} />
-                                </div>
-                              ))}
-                            </div>
-                          ))}
-                          {selectedLetters.length === 0 && (
-                            <div className="text-stone-400 text-center">
-                              <div className="w-16 h-16 rounded-full bg-stone-100 flex items-center justify-center mx-auto mb-3">
-                                <div className="w-8 h-8 rounded-full bg-stone-300"></div>
-                              </div>
-                              <p className="text-base font-light">아래에서 지화를 선택해보세요</p>
-                            </div>
-                          )}
-                        </div>
+                {selectedLetters.length === 0 ? (
+                  <div className="bg-white border-2 border-teal-200/50 rounded-2xl p-6 shadow-xl flex items-center justify-center" style={{ width: "600px", height: "340px" }}>
+                    <div className="text-stone-400 text-center">
+                      <div className="w-16 h-16 rounded-full bg-stone-100 flex items-center justify-center mx-auto mb-3">
+                        <div className="w-8 h-8 rounded-full bg-stone-300"></div>
                       </div>
-                    </div>
-
-                    {/* 조합된 글자 */}
-                    <div className="text-center py-2 border-t-2 border-teal-200 flex-shrink-0">
-                      <p className="text-xl font-bold text-emerald-600">{combineJamos(selectedLetters) || "이름"}</p>
-                    </div>
-
-                    {/* 하단 정보 */}
-                    <div className="flex items-center justify-center pt-2 flex-shrink-0">
-                      <div>
-                        <img src="/logo-black.png" alt="서대문농아인복지관" className="h-6" />
-                      </div>
+                      <p className="text-base font-light">아래에서 지화를 선택해보세요</p>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <BusinessCard
+                    letters={selectedLetters}
+                    userName={combineJamos(selectedLetters)}
+                    signSize={signSize}
+                    layoutDirection={layoutDirection}
+                    width="600px"
+                    height="340px"
+                  />
+                )}
               </div>
             </div>
 
@@ -190,11 +123,23 @@ export default function NameInput() {
                   전체삭제
                 </button>
                 <button
-                  onClick={handleComplete}
+                  onClick={() => {
+                    if (selectedLetters.length > 0) {
+                      // sessionStorage에 데이터 저장
+                      const letterData = selectedLetters.map((l) => ({
+                        char: l.char,
+                        imagePath: l.imagePath,
+                      }));
+                      sessionStorage.setItem("selectedLetters", JSON.stringify(letterData));
+                      sessionStorage.setItem("signSize", signSize.toString());
+                      sessionStorage.setItem("layoutDirection", layoutDirection);
+                      navigate("/contact-input");
+                    }
+                  }}
                   disabled={selectedLetters.length === 0}
                   className="px-4 py-3 bg-green-600 disabled:bg-stone-300 active:bg-green-700 text-white text-base font-medium rounded-lg shadow-md active:scale-95 transition-all duration-150 disabled:cursor-not-allowed touch-manipulation min-h-[48px]"
                 >
-                  명함완성
+                  다음
                 </button>
               </div>
 

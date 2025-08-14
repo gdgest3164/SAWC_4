@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { useSearchParams, Link } from "@remix-run/react";
+import { useSearchParams } from "@remix-run/react";
 import type { MetaFunction } from "@remix-run/node";
 import html2canvas from "html2canvas";
 import * as FileSaver from "file-saver";
-import { type FingerLetter, groupJamosByCharacter } from "~/utils/fingerLetters";
+import BusinessCard from "~/components/BusinessCard";
 
 export const meta: MetaFunction = () => {
   return [{ title: "지화 명함 - 디지털 명함" }, { name: "description", content: "QR코드로 공유된 지화 명함입니다" }];
@@ -14,8 +14,21 @@ interface CardData {
   userName: string;
   signSize: number;
   layoutDirection: "horizontal" | "vertical";
+  phoneNumber?: string;
+  design?: {
+    id: string;
+    name: string;
+    cardClass: string;
+    borderColor: string;
+    textColor: string;
+    subtextColor: string;
+    dividerColor: string;
+    accentColor: string;
+    characterBg: string;
+  };
   timestamp: number;
 }
+
 
 export default function SharedCard() {
   const [searchParams] = useSearchParams();
@@ -134,59 +147,17 @@ export default function SharedCard() {
 
         {/* 명함 */}
         <div className="flex justify-center">
-          <div ref={cardRef} className="bg-white border-2 border-teal-200/50 rounded-2xl p-6 shadow-2xl" style={{ width: "600px", height: "340px" }}>
-            <div className="h-full flex flex-col">
-              {/* 지화 이미지 영역 */}
-              <div className="flex-1 flex items-center justify-center overflow-hidden">
-                <div className="text-center w-full">
-                  {cardData.letters && cardData.letters.length > 0 ? (
-                    <div className={`flex ${cardData.layoutDirection === "horizontal" ? "flex-wrap gap-4 justify-center" : "flex-col gap-2 items-center"}`}>
-                      {groupJamosByCharacter(cardData.letters.map((l) => ({ ...l, type: "consonant" as const, displayOrder: 1 }))).map((group, groupIndex) => (
-                        <div key={groupIndex} className={`flex ${cardData.layoutDirection === "horizontal" ? "gap-2" : "gap-2"}`}>
-                          {group.map((letter, letterIndex) => (
-                            <div key={letterIndex} className="text-center">
-                              <img
-                                src={letter.imagePath}
-                                alt={letter.char}
-                                className="object-contain mx-auto"
-                                style={{ width: `${cardData.signSize * 4}px`, height: `${cardData.signSize * 4}px` }}
-                                onError={(e) => {
-                                  console.error("이미지 로드 실패:", letter.imagePath);
-                                  e.currentTarget.style.border = "2px solid red";
-                                }}
-                                onLoad={() => {
-                                  console.log("이미지 로드 성공:", letter.imagePath);
-                                }}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-teal-400 text-center">
-                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-teal-100 to-emerald-100 flex items-center justify-center mx-auto mb-4 shadow-lg border-2 border-teal-200/50">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-teal-400 to-emerald-400"></div>
-                      </div>
-                      <p className="text-lg font-medium text-teal-600">지화 명함</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* 조합된 글자 */}
-              <div className="text-center py-3 border-t-2 border-teal-200 flex-shrink-0">
-                <p className="text-2xl font-bold text-emerald-600">{cardData.userName}</p>
-              </div>
-
-              {/* 하단 정보 */}
-              <div className="flex items-center justify-center pt-2 flex-shrink-0">
-                <div>
-                  <img src="/logo-black.png" alt="서대문농아인복지관" className="h-6" />
-                </div>
-              </div>
-            </div>
-          </div>
+          <BusinessCard
+            ref={cardRef}
+            letters={cardData.letters || []}
+            userName={cardData.userName}
+            phoneNumber={cardData.phoneNumber}
+            signSize={cardData.signSize}
+            layoutDirection={cardData.layoutDirection}
+            design={cardData.design}
+            width="620px"
+            height="380px"
+          />
         </div>
 
         {/* 저장 버튼 */}

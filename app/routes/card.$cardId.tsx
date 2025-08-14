@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams, Link } from "@remix-run/react";
+import { useParams } from "@remix-run/react";
 import type { MetaFunction } from "@remix-run/node";
 import html2canvas from "html2canvas";
 import * as FileSaver from "file-saver";
-import { type FingerLetter, combineJamos, groupJamosByCharacter } from "~/utils/fingerLetters";
+import { type FingerLetter, groupJamosByCharacter } from "~/utils/fingerLetters";
 
 export const meta: MetaFunction = () => {
   return [{ title: "지화 명함 - 디지털 명함" }, { name: "description", content: "QR코드로 공유된 지화 명함입니다" }];

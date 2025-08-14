@@ -1,10 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "@remix-run/react";
 import type { MetaFunction } from "@remix-run/node";
 import QRCode from "qrcode";
-import html2canvas from "html2canvas";
-import * as FileSaver from "file-saver";
-import { type FingerLetter, combineJamos, groupJamosByCharacter } from "~/utils/fingerLetters";
+import { type FingerLetter, combineJamos } from "~/utils/fingerLetters";
+import BusinessCard from "~/components/BusinessCard";
 
 export const meta: MetaFunction = () => {
   return [{ title: "명함 완성 - 지화 명함 만들기" }, { name: "description", content: "완성된 지화 명함을 저장하세요" }];
@@ -17,60 +16,22 @@ export default function Preview() {
   const [selectedLetters, setSelectedLetters] = useState<FingerLetter[]>([]);
   const [userName, setUserName] = useState("");
   const [qrCodeUrl, setQrCodeUrl] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isGeneratingQR, setIsGeneratingQR] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
-  const [isQRSaved, setIsQRSaved] = useState(false);
   const [signSize, setSignSize] = useState(12);
   const [layoutDirection, setLayoutDirection] = useState<"horizontal" | "vertical">("horizontal");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [selectedDesign, setSelectedDesign] = useState<{
+    id: string;
+    name: string;
+    cardClass: string;
+    borderColor: string;
+    textColor: string;
+    subtextColor: string;
+    dividerColor: string;
+    accentColor: string;
+    characterBg: string;
+  } | undefined>(undefined);
 
-  useEffect(() => {
-    const letters = sessionStorage.getItem("selectedLetters");
-    const savedSignSize = sessionStorage.getItem("signSize");
-    const savedLayoutDirection = sessionStorage.getItem("layoutDirection");
-
-    console.log("Preview - sessionStorage letters:", letters);
-
-    if (!letters) {
-      navigate("/name-input");
-      return;
-    }
-
-    const parsedLetters = JSON.parse(letters) as FingerLetter[];
-    console.log("Preview - parsedLetters:", parsedLetters);
-    setSelectedLetters(parsedLetters);
-
-    if (savedSignSize) {
-      setSignSize(parseInt(savedSignSize));
-    }
-
-    if (savedLayoutDirection) {
-      setLayoutDirection(savedLayoutDirection as "horizontal" | "vertical");
-    }
-
-    const combinedName = combineJamos(parsedLetters);
-    setUserName(combinedName);
-
-    // 기존 QR 코드가 있는지 확인
-    const existingQRId = sessionStorage.getItem("currentQRId");
-    if (existingQRId) {
-      // 기존 QR 코드 재사용
-      const url = `${window.location.origin}/card/shared?id=${existingQRId}`;
-      QRCode.toDataURL(url, {
-        width: 200,
-        margin: 2,
-        color: {
-          dark: "#000000",
-          light: "#FFFFFF",
-        },
-      }).then(setQrCodeUrl);
-    } else {
-      // 새로운 QR 코드 생성
-      generateQRCode(combinedName);
-    }
-  }, [navigate]);
-
-  const generateQRCode = async (name: string) => {
+  const generateQRCode = useCallback(async (name: string) => {
     try {
       const timestamp = new Date().getTime();
 
@@ -84,6 +45,8 @@ export default function Preview() {
         signSize: signSize,
         layoutDirection: layoutDirection,
         userName: name,
+        phoneNumber: phoneNumber,
+        design: selectedDesign,
         timestamp: timestamp,
       };
       console.log("QR 생성 시 cardData:", cardData);
@@ -116,61 +79,67 @@ export default function Preview() {
     } catch (error) {
       console.error("QR 코드 생성 실패:", error);
     }
-  };
+  }, [signSize, layoutDirection, phoneNumber, selectedDesign]);
 
-  const saveAsImage = async () => {
-    if (!cardRef.current) return;
+  useEffect(() => {
+    const letters = sessionStorage.getItem("selectedLetters");
+    const savedSignSize = sessionStorage.getItem("signSize");
+    const savedLayoutDirection = sessionStorage.getItem("layoutDirection");
+    const savedPhoneNumber = sessionStorage.getItem("phoneNumber");
+    const savedDesign = sessionStorage.getItem("selectedDesign");
 
-    setIsGenerating(true);
+    console.log("Preview - sessionStorage letters:", letters);
 
-    try {
-      const canvas = await html2canvas(cardRef.current, {
-        scale: 2,
-        backgroundColor: "#FFFFFF",
-        logging: false,
-      });
-
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const fileName = `지화명함_${userName}_${new Date().getTime()}.png`;
-          FileSaver.saveAs(blob, fileName);
-          setIsSaved(true);
-          setTimeout(() => setIsSaved(false), 3000);
-        }
-      });
-    } catch (error) {
-      console.error("이미지 저장 실패:", error);
-    } finally {
-      setIsGenerating(false);
+    if (!letters) {
+      navigate("/name-input");
+      return;
     }
-  };
 
-  const saveQRAsImage = async () => {
-    if (!qrRef.current) return;
+    const parsedLetters = JSON.parse(letters) as FingerLetter[];
+    console.log("Preview - parsedLetters:", parsedLetters);
+    setSelectedLetters(parsedLetters);
 
-    setIsGeneratingQR(true);
-
-    try {
-      const canvas = await html2canvas(qrRef.current, {
-        scale: 2,
-        backgroundColor: "#FFFFFF",
-        logging: false,
-      });
-
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const fileName = `QR코드_${userName}_${new Date().getTime()}.png`;
-          FileSaver.saveAs(blob, fileName);
-          setIsQRSaved(true);
-          setTimeout(() => setIsQRSaved(false), 3000);
-        }
-      });
-    } catch (error) {
-      console.error("QR 이미지 저장 실패:", error);
-    } finally {
-      setIsGeneratingQR(false);
+    if (savedSignSize) {
+      setSignSize(parseInt(savedSignSize));
     }
-  };
+
+    if (savedLayoutDirection) {
+      setLayoutDirection(savedLayoutDirection as "horizontal" | "vertical");
+    }
+
+    if (savedPhoneNumber) {
+      setPhoneNumber(savedPhoneNumber);
+    }
+
+    if (savedDesign) {
+      try {
+        setSelectedDesign(JSON.parse(savedDesign));
+      } catch (error) {
+        console.error("디자인 데이터 파싱 실패:", error);
+      }
+    }
+
+    const combinedName = combineJamos(parsedLetters);
+    setUserName(combinedName);
+
+    // 기존 QR 코드가 있는지 확인
+    const existingQRId = sessionStorage.getItem("currentQRId");
+    if (existingQRId) {
+      // 기존 QR 코드 재사용
+      const url = `${window.location.origin}/card/shared?id=${existingQRId}`;
+      QRCode.toDataURL(url, {
+        width: 200,
+        margin: 2,
+        color: {
+          dark: "#000000",
+          light: "#FFFFFF",
+        },
+      }).then(setQrCodeUrl);
+    } else {
+      // 새로운 QR 코드 생성
+      generateQRCode(combinedName);
+    }
+  }, [navigate, generateQRCode]);
 
   return (
     <div className="h-screen bg-gradient-to-br from-teal-50 via-emerald-50 to-cyan-50 p-4 flex flex-col overflow-hidden">
@@ -187,38 +156,17 @@ export default function Preview() {
           <div className="flex gap-4 mb-4 flex-1 items-center">
             {/* 명함 */}
             <div className="flex-1 flex justify-center">
-              <div ref={cardRef} className="bg-white border-2 border-teal-200/50 rounded-2xl p-6 shadow-xl" style={{ width: "600px", height: "340px" }}>
-                <div className="h-full flex flex-col">
-                  {/* 지화 이미지 영역 */}
-                  <div className="flex-1 flex items-center justify-center overflow-hidden">
-                    <div className="text-center w-full">
-                      <div className={`flex ${layoutDirection === "horizontal" ? "flex-wrap gap-4 justify-center" : "flex-col gap-2 items-center"}`}>
-                        {groupJamosByCharacter(selectedLetters).map((group, groupIndex) => (
-                          <div key={groupIndex} className={`flex ${layoutDirection === "horizontal" ? "gap-2" : "gap-2"}`}>
-                            {group.map((letter, letterIndex) => (
-                              <div key={letterIndex} className="text-center">
-                                <img src={letter.imagePath} alt={letter.char} className="object-contain mx-auto" style={{ width: `${signSize * 4}px`, height: `${signSize * 4}px` }} />
-                              </div>
-                            ))}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 조합된 글자 */}
-                  <div className="text-center py-3 border-t-2 border-teal-200 flex-shrink-0">
-                    <p className="text-2xl font-bold text-emerald-600">{userName}</p>
-                  </div>
-
-                  {/* 하단 정보 */}
-                  <div className="flex items-center justify-center pt-2 flex-shrink-0">
-                    <div>
-                      <img src="/logo-black.png" alt="서대문농아인복지관" className="h-6" />
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <BusinessCard
+                ref={cardRef}
+                letters={selectedLetters}
+                userName={userName}
+                phoneNumber={phoneNumber}
+                signSize={signSize}
+                layoutDirection={layoutDirection}
+                design={selectedDesign}
+                width="620px"
+                height="380px"
+              />
             </div>
 
             {/* QR 코드 */}
@@ -251,7 +199,7 @@ export default function Preview() {
           {/* 하단 버튼 영역 */}
           <div className="flex justify-center gap-4 mb-3 flex-shrink-0">
             <button
-              onClick={() => navigate("/name-input")}
+              onClick={() => navigate("/design-select")}
               className="px-12 py-6 bg-gradient-to-r from-teal-600 to-cyan-600 active:from-teal-700 active:to-cyan-700 text-white text-2xl font-bold rounded-xl shadow-xl active:scale-95 transition-all duration-150 touch-manipulation min-h-[64px] min-w-[160px] border border-white/20"
             >
               수정하기
