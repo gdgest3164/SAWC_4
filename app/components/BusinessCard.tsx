@@ -4,7 +4,7 @@ import { type FingerLetter, groupJamosByCharacter } from "~/utils/fingerLetters"
 // 기본 디자인 설정
 const defaultDesign = {
   id: "minimal",
-  name: "미니멀",
+  name: "디자인1",
   cardClass: "bg-white shadow-2xl border-l-8 border-l-slate-800 border border-slate-200/30",
   borderColor: "border-slate-300/50",
   textColor: "text-slate-900",
@@ -147,7 +147,11 @@ const BusinessCard = forwardRef<HTMLDivElement, BusinessCardProps>(
 
               {/* 기관 정보 */}
               <div className="text-right">
-                <img src="/logo-black.png" alt="서대문농아인복지관" className={`${isSmall ? "h-4" : "h-6"} ml-auto opacity-80 drop-shadow-sm`} />
+                <img
+                  src={currentDesign.id === "luxury" || currentDesign.id === "neon" || currentDesign.id === "tech" ? "/logo-white.png" : "/logo-black.png"}
+                  alt="서대문농아인복지관"
+                  className={`${isSmall ? "h-4" : "h-6"} ml-auto opacity-80 drop-shadow-sm`}
+                />
               </div>
             </div>
           </div>

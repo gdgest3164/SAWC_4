@@ -147,7 +147,11 @@ export default function CardView() {
               {/* 하단 정보 */}
               <div className="flex items-center justify-center pt-2 flex-shrink-0">
                 <div>
-                  <img src="/logo-black.png" alt="서대문농아인복지관" className="h-6" />
+                  <img
+                    src={cardData.design?.id === "luxury" || cardData.design?.id === "neon" || cardData.design?.id === "tech" ? "/logo-white.png" : "/logo-black.png"}
+                    alt="서대문농아인복지관"
+                    className="h-6"
+                  />
                 </div>
               </div>
             </div>

@@ -13,7 +13,7 @@ export const meta: MetaFunction = () => {
 const cardDesigns = [
   {
     id: "minimal",
-    name: "미니멀",
+    name: "디자인1",
     cardClass: "bg-white shadow-2xl border-l-8 border-l-slate-800 border border-slate-200/30",
     borderColor: "border-slate-300/50",
     textColor: "text-slate-900",
@@ -24,7 +24,7 @@ const cardDesigns = [
   },
   {
     id: "luxury",
-    name: "럭셔리",
+    name: "디자인2",
     cardClass: "bg-gradient-to-br from-gray-900 via-slate-800 to-black shadow-2xl border-2 border-yellow-400/50",
     borderColor: "border-yellow-400/30",
     textColor: "text-yellow-100",
@@ -35,7 +35,7 @@ const cardDesigns = [
   },
   {
     id: "nature",
-    name: "내츄럴",
+    name: "디자인3",
     cardClass: "bg-gradient-to-br from-emerald-50 to-teal-50 shadow-2xl border-t-4 border-t-emerald-600 border border-emerald-200/60",
     borderColor: "border-emerald-300/50",
     textColor: "text-emerald-900",
