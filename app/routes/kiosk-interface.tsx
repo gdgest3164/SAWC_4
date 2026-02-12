@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "@remix-run/react";
 import type { MetaFunction } from "@remix-run/node";
 import { consonants, vowels, type FingerLetter, combineJamos } from "~/utils/fingerLetters";
@@ -55,6 +55,20 @@ export default function KioskInterface() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [selectedDesign, setSelectedDesign] = useState(cardDesigns[0]);
   const [qrCodeUrl, setQrCodeUrl] = useState("");
+  const cardContainerRef = useRef<HTMLDivElement>(null);
+  const [cardScale, setCardScale] = useState(1);
+
+  useEffect(() => {
+    const updateScale = () => {
+      if (cardContainerRef.current) {
+        const containerW = cardContainerRef.current.clientWidth;
+        setCardScale(Math.min(1, containerW / 620));
+      }
+    };
+    updateScale();
+    window.addEventListener("resize", updateScale);
+    return () => window.removeEventListener("resize", updateScale);
+  }, []);
 
   const handleLetterClick = (letter: FingerLetter) => {
     setSelectedLetters([...selectedLetters, letter]);
@@ -97,6 +111,8 @@ export default function KioskInterface() {
       letters: selectedLetters.map((l) => ({ char: l.char, imagePath: l.imagePath })),
       userName: combineJamos(selectedLetters),
       phoneNumber: phoneNumber,
+      signSize: 12,
+      layoutDirection: "horizontal" as const,
       design: selectedDesign,
       timestamp: new Date().getTime(),
     };
@@ -171,17 +187,21 @@ export default function KioskInterface() {
         <div className="w-2/5 bg-white p-8 flex flex-col">
           <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">명함 미리보기</h2>
           
-          <div className="flex-1 flex items-center justify-center">
-            <BusinessCard
-              letters={selectedLetters}
-              userName={combineJamos(selectedLetters) || "이름을 입력해주세요"}
-              phoneNumber={step >= 2 ? phoneNumber : ""}
-              signSize={12}
-              layoutDirection="horizontal"
-              design={selectedDesign}
-              width="520px"
-              height="320px"
-            />
+          <div ref={cardContainerRef} className="flex-1 flex items-center justify-center">
+            <div style={{ width: `${620 * cardScale}px`, height: `${380 * cardScale}px` }}>
+              <div style={{ transform: `scale(${cardScale})`, transformOrigin: "top left" }}>
+                <BusinessCard
+                  letters={selectedLetters}
+                  userName={combineJamos(selectedLetters) || "이름을 입력해주세요"}
+                  phoneNumber={step >= 2 ? phoneNumber : ""}
+                  signSize={12}
+                  layoutDirection="horizontal"
+                  design={selectedDesign}
+                  width="620px"
+                  height="380px"
+                />
+              </div>
+            </div>
           </div>
 
           {/* 현재 입력 상태 */}

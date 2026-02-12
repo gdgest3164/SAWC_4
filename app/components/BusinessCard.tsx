@@ -43,11 +43,6 @@ const BusinessCard = forwardRef<HTMLDivElement, BusinessCardProps>(
   ({ letters, userName, phoneNumber, signSize, layoutDirection, design, width = "620px", height = "380px", className = "", sizeMultiplier = 4 }, ref) => {
     const currentDesign = design || defaultDesign;
     const isSmall = sizeMultiplier <= 3;
-    
-    // 지화 개수에 따라 동적으로 크기 조정
-    const letterCount = letters.length;
-    const adjustedSizeMultiplier = letterCount > 8 ? Math.max(sizeMultiplier * 0.85, 2.5) : sizeMultiplier;
-    const adjustedSignSize = letterCount > 10 ? Math.max(signSize * 0.9, 10) : signSize;
 
     // letters 배열을 FingerLetter 형태로 변환
     const fingerLetters = letters.map((letter) => ({
@@ -55,6 +50,43 @@ const BusinessCard = forwardRef<HTMLDivElement, BusinessCardProps>(
       type: "consonant" as const,
       displayOrder: 1,
     }));
+
+    // 카드 크기에 맞게 이미지 크기 자동 계산
+    const calculateImageSize = (): number => {
+      const baseSize = signSize * sizeMultiplier;
+      if (fingerLetters.length === 0) return baseSize;
+
+      const cardW = parseFloat(width) || 620;
+      const cardH = parseFloat(height) || 380;
+      const pad = isSmall ? 24 : 32;
+      const availW = cardW - pad * 2;
+      const headerH = isSmall ? 30 : 45;
+      const footerH = isSmall ? 55 : 75;
+      const availH = cardH - pad * 2 - headerH - footerH;
+
+      const groups = groupJamosByCharacter(fingerLetters);
+      const totalLetters = fingerLetters.length;
+      const numGroups = groups.length;
+      const innerGap = isSmall ? 12 : 16;
+      const outerGap = isSmall ? 8 : 12;
+
+      let size = baseSize;
+
+      if (layoutDirection === "horizontal") {
+        const gapTotal = innerGap * (totalLetters - numGroups) + outerGap * Math.max(0, numGroups - 1);
+        const maxOneRow = (availW - gapTotal) / totalLetters;
+        size = Math.min(size, maxOneRow, availH);
+      } else {
+        const maxGroupLen = Math.max(...groups.map(g => g.length));
+        const maxByWidth = (availW - (maxGroupLen - 1) * innerGap) / maxGroupLen;
+        const maxByHeight = (availH - (numGroups - 1) * outerGap) / numGroups;
+        size = Math.min(size, maxByWidth, maxByHeight);
+      }
+
+      return Math.max(16, Math.floor(size));
+    };
+
+    const imgSize = calculateImageSize();
 
     return (
       <div
@@ -95,7 +127,7 @@ const BusinessCard = forwardRef<HTMLDivElement, BusinessCardProps>(
                               src={letter.imagePath}
                               alt={letter.char}
                               className="object-contain mx-auto transition-all duration-300 group-hover:scale-110"
-                              style={{ width: `${adjustedSignSize * adjustedSizeMultiplier}px`, height: `${adjustedSignSize * adjustedSizeMultiplier}px` }}
+                              style={{ width: `${imgSize}px`, height: `${imgSize}px` }}
                               onError={(e) => {
                                 console.error("이미지 로드 실패:", letter.imagePath);
                                 e.currentTarget.style.border = "2px solid red";

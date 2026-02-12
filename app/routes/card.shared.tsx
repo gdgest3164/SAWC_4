@@ -38,6 +38,16 @@ export default function SharedCard() {
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const updateScale = () => {
+      setScale(Math.min(1, (window.innerWidth - 32) / 620));
+    };
+    updateScale();
+    window.addEventListener("resize", updateScale);
+    return () => window.removeEventListener("resize", updateScale);
+  }, []);
 
   useEffect(() => {
     try {
@@ -137,35 +147,49 @@ export default function SharedCard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-teal-50 via-emerald-50 to-cyan-50 flex items-center justify-center p-4">
-      <div className="max-w-2xl w-full space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-teal-50 via-emerald-50 to-cyan-50 flex items-center justify-center px-3 py-6 sm:p-4">
+      <div className="max-w-2xl w-full space-y-5 sm:space-y-8">
         {/* 헤더 */}
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 mb-2">지화 명함</h1>
-          <p className="text-slate-600 font-medium">QR코드로 공유된 디지털 명함입니다</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 mb-1 sm:mb-2">지화 명함</h1>
+          <p className="text-sm sm:text-base text-slate-600 font-medium">QR코드로 공유된 디지털 명함입니다</p>
         </div>
 
         {/* 명함 */}
         <div className="flex justify-center">
-          <BusinessCard
-            ref={cardRef}
-            letters={cardData.letters || []}
-            userName={cardData.userName}
-            phoneNumber={cardData.phoneNumber}
-            signSize={cardData.signSize}
-            layoutDirection={cardData.layoutDirection}
-            design={cardData.design}
-            width="620px"
-            height="380px"
-          />
+          <div
+            style={{
+              width: `${620 * scale}px`,
+              height: `${380 * scale}px`,
+            }}
+          >
+            <div
+              style={{
+                transform: `scale(${scale})`,
+                transformOrigin: "top left",
+              }}
+            >
+              <BusinessCard
+                ref={cardRef}
+                letters={cardData.letters || []}
+                userName={cardData.userName}
+                phoneNumber={cardData.phoneNumber}
+                signSize={cardData.signSize ?? 12}
+                layoutDirection={cardData.layoutDirection ?? "horizontal"}
+                design={cardData.design}
+                width="620px"
+                height="380px"
+              />
+            </div>
+          </div>
         </div>
 
         {/* 저장 버튼 */}
-        <div className="flex justify-center gap-3 mb-6">
+        <div className="flex justify-center gap-3 mb-4 sm:mb-6">
           <button
             onClick={saveAsImage}
             disabled={isGenerating}
-            className={`px-8 py-4 bg-gradient-to-r active:scale-95 transition-all duration-150 touch-manipulation min-h-[56px] min-w-[140px] border border-white/20 rounded-xl shadow-xl font-bold text-lg text-white ${
+            className={`px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r active:scale-95 transition-all duration-150 touch-manipulation min-h-[48px] sm:min-h-[56px] min-w-[120px] sm:min-w-[140px] border border-white/20 rounded-xl shadow-xl font-bold text-base sm:text-lg text-white ${
               isSaved ? "from-green-500 to-green-600" : isGenerating ? "from-gray-400 to-gray-500 cursor-not-allowed" : "from-teal-600 to-emerald-600 active:from-teal-700 active:to-emerald-700"
             }`}
           >
@@ -175,11 +199,11 @@ export default function SharedCard() {
 
         {/* 안내 메시지 */}
         <div className="text-center">
-          <div className="inline-block bg-gradient-to-r from-teal-50 to-emerald-50 rounded-xl p-4 border-2 border-teal-200/50 shadow-sm">
-            <p className="text-slate-700 text-sm font-medium">
+          <div className="inline-block bg-gradient-to-r from-teal-50 to-emerald-50 rounded-xl p-3 sm:p-4 border-2 border-teal-200/50 shadow-sm">
+            <p className="text-slate-700 text-xs sm:text-sm font-medium">
               <span className="text-emerald-600 font-bold">서대문농아인복지관</span>에서 제공하는 지화 명함 서비스입니다
             </p>
-            {isSaved && <p className="text-green-600 text-sm font-medium mt-2">파일이 다운로드 폴더에 저장되었습니다!</p>}
+            {isSaved && <p className="text-green-600 text-xs sm:text-sm font-medium mt-2">파일이 다운로드 폴더에 저장되었습니다!</p>}
           </div>
         </div>
       </div>
