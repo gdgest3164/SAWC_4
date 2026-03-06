@@ -20,6 +20,7 @@ const cardDesigns = [
     dividerColor: "border-slate-800",
     accentColor: "bg-slate-800",
     characterBg: "bg-slate-50 border border-slate-200",
+    borderWidthX: 9, // border-l-8(8px) + border(1px)
   },
   {
     id: "glassmorphism",
@@ -31,6 +32,7 @@ const cardDesigns = [
     dividerColor: "border-white/50",
     accentColor: "bg-gradient-to-r from-blue-400 to-purple-500",
     characterBg: "bg-white/30 border border-white/40 backdrop-blur-sm",
+    borderWidthX: 2, // border(1px * 2)
   },
   {
     id: "luxury",
@@ -42,6 +44,7 @@ const cardDesigns = [
     dividerColor: "border-yellow-400",
     accentColor: "bg-gradient-to-r from-yellow-400 to-amber-500",
     characterBg: "bg-gradient-to-br from-yellow-100/20 to-amber-200/20 border border-yellow-400/30",
+    borderWidthX: 4, // border-2(2px * 2)
   },
   {
     id: "neon",
@@ -53,6 +56,7 @@ const cardDesigns = [
     dividerColor: "border-cyan-400",
     accentColor: "bg-gradient-to-r from-cyan-400 to-blue-500",
     characterBg: "bg-cyan-500/20 border-2 border-cyan-400/50 shadow-lg shadow-cyan-500/30",
+    borderWidthX: 4, // border-2(2px * 2)
   },
   {
     id: "gradient",
@@ -64,6 +68,7 @@ const cardDesigns = [
     dividerColor: "border-white/50",
     accentColor: "bg-white",
     characterBg: "bg-white/20 border border-white/40 backdrop-blur-sm",
+    borderWidthX: 0, // no border
   },
   {
     id: "paper",
@@ -75,6 +80,7 @@ const cardDesigns = [
     dividerColor: "border-amber-400",
     accentColor: "bg-gradient-to-r from-amber-500 to-orange-500",
     characterBg: "bg-amber-100 border border-amber-300",
+    borderWidthX: 4, // border-2(2px * 2)
   },
   {
     id: "corporate",
@@ -86,6 +92,7 @@ const cardDesigns = [
     dividerColor: "border-blue-600",
     accentColor: "bg-gradient-to-r from-blue-600 to-indigo-600",
     characterBg: "bg-blue-100 border border-blue-300/50",
+    borderWidthX: 2, // border(1px * 2), border-t-4는 높이에만 영향
   },
   {
     id: "tech",
@@ -97,6 +104,7 @@ const cardDesigns = [
     dividerColor: "border-emerald-400",
     accentColor: "bg-gradient-to-r from-emerald-400 to-teal-400",
     characterBg: "bg-emerald-500/20 border border-emerald-400/50",
+    borderWidthX: 2, // border(1px * 2)
   },
 ];
 
@@ -169,8 +177,15 @@ export default function DesignSelect() {
       // 짧은 ID 생성
       const shortId = cardData.timestamp.toString(36);
 
+      // sessionStorage에 항상 저장 (Blob 저장 결과와 무관하게)
+      sessionStorage.setItem("selectedLetters", JSON.stringify(letterData));
+      sessionStorage.setItem("signSize", signSize.toString());
+      sessionStorage.setItem("layoutDirection", layoutDirection);
+      sessionStorage.setItem("phoneNumber", phoneNumber);
+      sessionStorage.setItem("selectedDesign", JSON.stringify(selectedDesign));
+
       try {
-        // Vercel Blob에 저장
+        // Vercel Blob에 저장 (실패해도 preview로 이동)
         const response = await fetch(`/api/card/${shortId}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -178,21 +193,17 @@ export default function DesignSelect() {
         });
 
         if (response.ok) {
-          // 성공시 sessionStorage에도 저장
-          sessionStorage.setItem("selectedLetters", JSON.stringify(letterData));
-          sessionStorage.setItem("signSize", signSize.toString());
-          sessionStorage.setItem("layoutDirection", layoutDirection);
-          sessionStorage.setItem("phoneNumber", phoneNumber);
-          sessionStorage.setItem("selectedDesign", JSON.stringify(selectedDesign));
           sessionStorage.setItem("currentQRId", shortId);
-          navigate("/preview");
         } else {
-          alert("명함 저장에 실패했습니다.");
+          console.warn("Blob 저장 실패, QR 공유 기능이 제한될 수 있습니다.");
+          sessionStorage.removeItem("currentQRId");
         }
       } catch (error) {
         console.error("저장 실패:", error);
-        alert("명함 저장에 실패했습니다.");
+        sessionStorage.removeItem("currentQRId");
       }
+
+      navigate("/preview");
     }
   };
 

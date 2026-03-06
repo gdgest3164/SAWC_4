@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "@remix-run/react";
 import type { MetaFunction } from "@remix-run/node";
 import html2canvas from "html2canvas";
-import * as FileSaver from "file-saver";
 import BusinessCard from "~/components/BusinessCard";
 
 export const meta: MetaFunction = () => {
@@ -102,16 +101,20 @@ export default function SharedCard() {
         scale: 2,
         backgroundColor: "#FFFFFF",
         logging: false,
+        useCORS: true,
       });
 
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const fileName = `지화명함_${cardData.userName}_${new Date().getTime()}.png`;
-          FileSaver.saveAs(blob, fileName);
-          setIsSaved(true);
-          setTimeout(() => setIsSaved(false), 3000);
-        }
-      });
+      const fileName = `지화명함_${cardData.userName}_${new Date().getTime()}.png`;
+      const dataUrl = canvas.toDataURL("image/png");
+
+      // <a download> 방식 (모바일 포함 범용 지원)
+      const link = document.createElement("a");
+      link.download = fileName;
+      link.href = dataUrl;
+      link.click();
+
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 3000);
     } catch (error) {
       console.error("이미지 저장 실패:", error);
     } finally {

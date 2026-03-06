@@ -12,6 +12,7 @@ const defaultDesign = {
   dividerColor: "border-slate-800",
   accentColor: "bg-slate-800",
   characterBg: "bg-slate-50 border border-slate-200",
+  borderWidthX: 9, // border-l-8(8px) + border(1px)
 };
 
 interface DesignType {
@@ -24,6 +25,7 @@ interface DesignType {
   dividerColor: string;
   accentColor: string;
   characterBg: string;
+  borderWidthX?: number; // 좌우 보더 합계(px) - 이미지 너비 계산에 사용
 }
 
 interface BusinessCardProps {
@@ -59,7 +61,8 @@ const BusinessCard = forwardRef<HTMLDivElement, BusinessCardProps>(
       const cardW = parseFloat(width) || 620;
       const cardH = parseFloat(height) || 380;
       const pad = isSmall ? 24 : 32;
-      const availW = cardW - pad * 2;
+      const borderAdj = currentDesign.borderWidthX ?? 0;
+      const availW = cardW - pad * 2 - borderAdj;
       const headerH = isSmall ? 30 : 45;
       const footerH = isSmall ? 55 : 75;
       const availH = cardH - pad * 2 - headerH - footerH;
