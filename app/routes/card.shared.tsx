@@ -63,49 +63,31 @@ const fetchToDataUrl = async (url: string): Promise<string> => {
   });
 };
 
-// iOS Safari는 foreignObject 안의 <img> 태그를 렌더 못 함.
-// <img>를 같은 크기의 <div>로 바꾸고 background-image(data URL)로 그리면
-// iOS/Android 모두에서 안정적으로 렌더됨.
-const replaceImgsWithBgDivs = async (root: HTMLElement): Promise<() => void> => {
+const inlineImagesAsDataUrl = async (root: HTMLElement): Promise<() => void> => {
   const imgs = Array.from(root.querySelectorAll("img"));
-  const pairs: { div: HTMLElement; img: HTMLImageElement; parent: ParentNode; nextSibling: Node | null }[] = [];
+  const originals = new Map<HTMLImageElement, string>();
 
   await Promise.all(
     imgs.map(async (img) => {
       const src = img.src;
-      if (!src || !img.parentNode) return;
+      if (!src || src.startsWith("data:")) return;
       try {
-        const dataUrl = src.startsWith("data:") ? src : await fetchToDataUrl(src);
-        const rect = img.getBoundingClientRect();
-        const computed = window.getComputedStyle(img);
-        const div = document.createElement("div");
-        div.className = img.className;
-        div.style.cssText = img.getAttribute("style") || "";
-        // 명시적 크기 보장 (img의 rendering box와 동일하게)
-        div.style.width = computed.width !== "auto" ? computed.width : `${rect.width}px`;
-        div.style.height = computed.height !== "auto" ? computed.height : `${rect.height}px`;
-        div.style.backgroundImage = `url("${dataUrl}")`;
-        div.style.backgroundSize = computed.objectFit === "cover" ? "cover" : "contain";
-        div.style.backgroundRepeat = "no-repeat";
-        div.style.backgroundPosition = "center";
-        div.style.display = "inline-block";
-        // alt는 무시 (장식용 이미지 가정)
-        const parent = img.parentNode;
-        const nextSibling = img.nextSibling;
-        parent.replaceChild(div, img);
-        pairs.push({ div, img, parent, nextSibling });
+        const dataUrl = await fetchToDataUrl(src);
+        originals.set(img, src);
+        img.src = dataUrl;
+        // data URL 반영 후 디코딩 대기 (iOS Safari는 src 교체 직후 렌더 지연)
+        if (img.decode) {
+          await img.decode().catch(() => {});
+        }
       } catch {
-        // 실패 시 원본 유지
+        // fetch 실패 시 원본 유지
       }
     })
   );
 
   return () => {
-    pairs.forEach(({ div, img, parent, nextSibling }) => {
-      if (div.parentNode === parent) {
-        parent.insertBefore(img, nextSibling);
-        parent.removeChild(div);
-      }
+    originals.forEach((src, img) => {
+      img.src = src;
     });
   };
 };
@@ -155,13 +137,15 @@ const renderWithHtml2Canvas = async (el: HTMLElement): Promise<Blob> => {
   });
 };
 
-// <img>를 <div background-image>로 바꿔둔 상태라 html-to-image가 iOS에서도
-// 이미지/그라데이션 모두 정확히 렌더. 실패 시 html2canvas 폴백.
+// iOS: html-to-image가 foreignObject 내 <img> 렌더 실패 → html2canvas 우선
+// Android/Desktop: html2canvas의 createPattern 이슈 회피 → html-to-image 우선
 const renderCardToBlob = async (el: HTMLElement): Promise<Blob> => {
+  const primary = isIOS() ? renderWithHtml2Canvas : renderWithHtmlToImage;
+  const fallback = isIOS() ? renderWithHtmlToImage : renderWithHtml2Canvas;
   try {
-    return await renderWithHtmlToImage(el);
+    return await primary(el);
   } catch {
-    return await renderWithHtml2Canvas(el);
+    return await fallback(el);
   }
 };
 
@@ -225,7 +209,7 @@ export default function SharedCard() {
         if (!cardRef.current) return;
         await waitForImages(cardRef.current);
         if (cancelled) return;
-        const restore = await replaceImgsWithBgDivs(cardRef.current);
+        const restore = await inlineImagesAsDataUrl(cardRef.current);
         try {
           if (cancelled) return;
           const blob = await renderCardToBlob(cardRef.current);
@@ -253,7 +237,7 @@ export default function SharedCard() {
     if (!blob) {
       if (!cardRef.current) throw new Error("카드 요소 없음");
       await waitForImages(cardRef.current);
-      const restore = await replaceImgsWithBgDivs(cardRef.current);
+      const restore = await inlineImagesAsDataUrl(cardRef.current);
       try {
         blob = await renderCardToBlob(cardRef.current);
       } finally {
