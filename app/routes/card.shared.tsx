@@ -113,6 +113,14 @@ const renderWithHtml2Canvas = async (el: HTMLElement): Promise<Blob> => {
       if (s.transform) s.transform = "none";
       if (s.backdropFilter) s.backdropFilter = "none";
       (s as CSSStyleDeclaration & { webkitBackdropFilter?: string }).webkitBackdropFilter = "none";
+      // blur 클래스(html2canvas가 렌더 못 함) 가진 요소는 숨김
+      // 원본에선 opacity-5 + blur로 거의 안 보이는 장식이라 제거해도 시각 차이 없음
+      const cls = e.className || "";
+      if (typeof cls === "string" && (/\bblur-/.test(cls) || /\bbackdrop-blur/.test(cls))) {
+        e.style.display = "none";
+      }
+      // 인라인 filter/backdrop-filter도 제거
+      if (s.filter && s.filter !== "none") s.filter = "none";
     });
     clonedEl.style.transform = "none";
     clonedEl.style.width = "620px";
