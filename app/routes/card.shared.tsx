@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "@remix-run/react";
 import type { MetaFunction } from "@remix-run/node";
 import html2canvas from "html2canvas";
+import { toBlob as htmlToBlob } from "html-to-image";
 import * as FileSaver from "file-saver";
 import BusinessCard from "~/components/BusinessCard";
 
@@ -134,92 +135,25 @@ export default function SharedCard() {
         const rect = cardRef.current.getBoundingClientRect();
         addLog(`cardRef rect=${Math.round(rect.width)}x${Math.round(rect.height)}`);
 
-        const cleanClone = (clonedEl: HTMLElement) => {
-          const all = clonedEl.querySelectorAll<HTMLElement>("*");
-          all.forEach((e) => {
-            const s = e.style;
-            if (s.transform) s.transform = "none";
-            if (s.backdropFilter) s.backdropFilter = "none";
-            (s as CSSStyleDeclaration & { webkitBackdropFilter?: string }).webkitBackdropFilter = "none";
-            // 0크기 요소는 숨김 처리 (createPattern 0x0 방지)
-            const r = e.getBoundingClientRect();
-            if (r.width === 0 || r.height === 0) {
-              e.style.display = "none";
-            }
-          });
-          clonedEl.style.transform = "none";
-          clonedEl.style.width = "620px";
-          clonedEl.style.height = "380px";
-        };
-
-        const baseOptions = {
-          scale: 2,
-          backgroundColor: "#FFFFFF" as const,
-          logging: false,
-          useCORS: true,
-          allowTaint: true,
-          imageTimeout: 15000,
+        addLog("html-to-image 렌더 시도");
+        const blob = await htmlToBlob(cardRef.current, {
+          pixelRatio: 2,
+          backgroundColor: "#FFFFFF",
           width: 620,
           height: 380,
-          windowWidth: 1280,
-          windowHeight: 800,
-        };
-
-        let canvas: HTMLCanvasElement | null = null;
-
-        // 1차 시도: foreignObjectRendering (createPattern 우회)
-        try {
-          addLog("foreignObject 렌더 시도");
-          canvas = await html2canvas(cardRef.current, {
-            ...baseOptions,
-            foreignObjectRendering: true,
-            onclone: (_doc, clonedEl) => {
-              cleanClone(clonedEl);
-              addLog("클론 DOM 정리 완료 (FO)");
-            },
-          });
-          addLog(`foreignObject 성공 ${canvas.width}x${canvas.height}`);
-          // foreignObject는 일부 브라우저에서 빈 캔버스 반환 가능
-          if (canvas.width === 0 || canvas.height === 0) {
-            addLog("foreignObject 결과 0크기, 표준 렌더 폴백", "warn");
-            canvas = null;
-          }
-        } catch (foErr) {
-          addLog(`foreignObject 실패: ${(foErr as Error).message}, 표준 폴백`, "warn");
-          canvas = null;
-        }
-
-        // 2차: 표준 element-by-element 렌더
-        if (!canvas) {
-          canvas = await html2canvas(cardRef.current, {
-            ...baseOptions,
-            foreignObjectRendering: false,
-            ignoreElements: (el) => {
-              if (el.tagName === "IMG") {
-                const img = el as HTMLImageElement;
-                if (img.naturalWidth === 0 || img.naturalHeight === 0) return true;
-              }
-              return false;
-            },
-            onclone: (_doc, clonedEl) => {
-              cleanClone(clonedEl);
-              addLog("클론 DOM 정리 완료 (표준)");
-            },
-          });
-        }
-
-        if (cancelled) return;
-        addLog(`캔버스 생성 완료 ${canvas.width}x${canvas.height}`);
-
-        const blob: Blob | null = await new Promise((resolve) => {
-          canvas.toBlob((b) => resolve(b), "image/png");
+          cacheBust: true,
+          style: {
+            transform: "none",
+            transformOrigin: "top left",
+          },
         });
 
         if (cancelled) return;
         if (!blob) {
-          addLog("Blob 변환 실패", "error");
+          addLog("Blob 변환 실패 (html-to-image)", "error");
           return;
         }
+        addLog(`html-to-image 성공 (${Math.round(blob.size / 1024)}KB)`);
 
         preparedBlobRef.current = blob;
         setBlobReady(true);
@@ -250,64 +184,33 @@ export default function SharedCard() {
       let blob = preparedBlobRef.current;
 
       if (!blob) {
-        addLog("사전 생성 안 됨, 지금 생성 중 (FO)...", "warn");
+        addLog("사전 생성 안 됨, 지금 생성 중...", "warn");
         if (!cardRef.current) throw new Error("cardRef 없음");
 
-        const cleanClone = (clonedEl: HTMLElement) => {
-          const all = clonedEl.querySelectorAll<HTMLElement>("*");
-          all.forEach((e) => {
-            const s = e.style;
-            if (s.transform) s.transform = "none";
-            if (s.backdropFilter) s.backdropFilter = "none";
-            (s as CSSStyleDeclaration & { webkitBackdropFilter?: string }).webkitBackdropFilter = "none";
-            const r = e.getBoundingClientRect();
-            if (r.width === 0 || r.height === 0) e.style.display = "none";
-          });
-          clonedEl.style.transform = "none";
-          clonedEl.style.width = "620px";
-          clonedEl.style.height = "380px";
-        };
-
-        const baseOptions = {
-          scale: 2,
-          backgroundColor: "#FFFFFF" as const,
-          logging: false,
-          useCORS: true,
-          allowTaint: true,
-          imageTimeout: 15000,
-          width: 620,
-          height: 380,
-          windowWidth: 1280,
-          windowHeight: 800,
-        };
-
-        let canvas: HTMLCanvasElement | null = null;
         try {
-          canvas = await html2canvas(cardRef.current, {
-            ...baseOptions,
-            foreignObjectRendering: true,
-            onclone: (_d, c) => cleanClone(c),
+          blob = await htmlToBlob(cardRef.current, {
+            pixelRatio: 2,
+            backgroundColor: "#FFFFFF",
+            width: 620,
+            height: 380,
+            cacheBust: true,
+            style: { transform: "none", transformOrigin: "top left" },
           });
-          if (canvas.width === 0 || canvas.height === 0) {
-            addLog("FO 0크기, 표준 폴백", "warn");
-            canvas = null;
-          }
         } catch (e) {
-          addLog(`FO 실패: ${(e as Error).message}`, "warn");
-          canvas = null;
-        }
-
-        if (!canvas) {
-          canvas = await html2canvas(cardRef.current, {
-            ...baseOptions,
-            foreignObjectRendering: false,
-            onclone: (_d, c) => cleanClone(c),
+          addLog(`html-to-image 실패, html2canvas 폴백: ${(e as Error).message}`, "warn");
+          const canvas = await html2canvas(cardRef.current, {
+            scale: 2,
+            backgroundColor: "#FFFFFF",
+            logging: false,
+            useCORS: true,
+            allowTaint: true,
+            width: 620,
+            height: 380,
+          });
+          blob = await new Promise<Blob | null>((resolve) => {
+            canvas.toBlob((b) => resolve(b), "image/png");
           });
         }
-
-        blob = await new Promise<Blob | null>((resolve) => {
-          canvas!.toBlob((b) => resolve(b), "image/png");
-        });
       }
 
       if (!blob) throw new Error("이미지 변환 실패");
