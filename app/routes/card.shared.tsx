@@ -250,16 +250,63 @@ export default function SharedCard() {
       let blob = preparedBlobRef.current;
 
       if (!blob) {
-        addLog("사전 생성 안 됨, 지금 생성 중...", "warn");
+        addLog("사전 생성 안 됨, 지금 생성 중 (FO)...", "warn");
         if (!cardRef.current) throw new Error("cardRef 없음");
-        const canvas = await html2canvas(cardRef.current, {
+
+        const cleanClone = (clonedEl: HTMLElement) => {
+          const all = clonedEl.querySelectorAll<HTMLElement>("*");
+          all.forEach((e) => {
+            const s = e.style;
+            if (s.transform) s.transform = "none";
+            if (s.backdropFilter) s.backdropFilter = "none";
+            (s as CSSStyleDeclaration & { webkitBackdropFilter?: string }).webkitBackdropFilter = "none";
+            const r = e.getBoundingClientRect();
+            if (r.width === 0 || r.height === 0) e.style.display = "none";
+          });
+          clonedEl.style.transform = "none";
+          clonedEl.style.width = "620px";
+          clonedEl.style.height = "380px";
+        };
+
+        const baseOptions = {
           scale: 2,
-          backgroundColor: "#FFFFFF",
+          backgroundColor: "#FFFFFF" as const,
           logging: false,
           useCORS: true,
-        });
+          allowTaint: true,
+          imageTimeout: 15000,
+          width: 620,
+          height: 380,
+          windowWidth: 1280,
+          windowHeight: 800,
+        };
+
+        let canvas: HTMLCanvasElement | null = null;
+        try {
+          canvas = await html2canvas(cardRef.current, {
+            ...baseOptions,
+            foreignObjectRendering: true,
+            onclone: (_d, c) => cleanClone(c),
+          });
+          if (canvas.width === 0 || canvas.height === 0) {
+            addLog("FO 0크기, 표준 폴백", "warn");
+            canvas = null;
+          }
+        } catch (e) {
+          addLog(`FO 실패: ${(e as Error).message}`, "warn");
+          canvas = null;
+        }
+
+        if (!canvas) {
+          canvas = await html2canvas(cardRef.current, {
+            ...baseOptions,
+            foreignObjectRendering: false,
+            onclone: (_d, c) => cleanClone(c),
+          });
+        }
+
         blob = await new Promise<Blob | null>((resolve) => {
-          canvas.toBlob((b) => resolve(b), "image/png");
+          canvas!.toBlob((b) => resolve(b), "image/png");
         });
       }
 
