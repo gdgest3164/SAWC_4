@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "@remix-run/react";
 import type { MetaFunction } from "@remix-run/node";
 import html2canvas from "html2canvas";
@@ -29,6 +29,7 @@ interface CardData {
   timestamp: number;
 }
 
+type LogEntry = { ts: string; msg: string; level: "info" | "warn" | "error" };
 
 export default function SharedCard() {
   const [searchParams] = useSearchParams();
@@ -39,6 +40,15 @@ export default function SharedCard() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [scale, setScale] = useState(1);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [showLogs, setShowLogs] = useState(false);
+  const preparedBlobRef = useRef<Blob | null>(null);
+  const [blobReady, setBlobReady] = useState(false);
+
+  const addLog = useCallback((msg: string, level: "info" | "warn" | "error" = "info") => {
+    const ts = new Date().toLocaleTimeString("ko-KR", { hour12: false });
+    setLogs((prev) => [...prev, { ts, msg, level }].slice(-30));
+  }, []);
 
   useEffect(() => {
     const updateScale = () => {
@@ -51,22 +61,16 @@ export default function SharedCard() {
 
   useEffect(() => {
     try {
-      // 새로운 방식: id로 localStorage에서 데이터 가져오기
       const id = searchParams.get("id");
       const data = searchParams.get("data");
 
-      console.log("SharedCard - 받은 id:", id);
-      console.log("SharedCard - 받은 data:", data);
-
       if (id) {
-        // 새로운 방식: 서버에서 데이터 가져오기
         fetch(`/api/card/${id}`)
           .then((res) => res.json())
           .then((data) => {
             if (data.error) {
               setError(data.error);
             } else {
-              console.log("SharedCard - 서버에서 가져온 데이터:", data);
               setCardData(data);
             }
             setLoading(false);
@@ -78,9 +82,7 @@ export default function SharedCard() {
           });
         return;
       } else if (data) {
-        // 기존 방식: URL 파라미터에서 데이터 가져오기 (호환성)
         const decodedData = JSON.parse(decodeURIComponent(data)) as CardData;
-        console.log("SharedCard - URL에서 가져온 데이터:", decodedData);
         setCardData(decodedData);
       } else {
         setError("명함 데이터가 없습니다.");
@@ -92,51 +94,131 @@ export default function SharedCard() {
     setLoading(false);
   }, [searchParams]);
 
+  // 카드 렌더 후 미리 blob 준비 (iOS user gesture 보존용)
+  useEffect(() => {
+    if (!cardData || !cardRef.current) return;
+    let cancelled = false;
+
+    addLog("이미지 사전 생성 시작");
+
+    const prepare = async () => {
+      try {
+        if (!cardRef.current) {
+          addLog("cardRef가 비어있음", "error");
+          return;
+        }
+
+        const canvas = await html2canvas(cardRef.current, {
+          scale: 2,
+          backgroundColor: "#FFFFFF",
+          logging: false,
+          useCORS: true,
+          allowTaint: false,
+        });
+
+        if (cancelled) return;
+        addLog(`캔버스 생성 완료 ${canvas.width}x${canvas.height}`);
+
+        const blob: Blob | null = await new Promise((resolve) => {
+          canvas.toBlob((b) => resolve(b), "image/png");
+        });
+
+        if (cancelled) return;
+        if (!blob) {
+          addLog("Blob 변환 실패", "error");
+          return;
+        }
+
+        preparedBlobRef.current = blob;
+        setBlobReady(true);
+        addLog(`이미지 준비 완료 (${Math.round(blob.size / 1024)}KB)`);
+      } catch (e) {
+        addLog(`사전 생성 실패: ${(e as Error).message || e}`, "error");
+      }
+    };
+
+    // 이미지 로드 여유 주고 실행
+    const timer = setTimeout(prepare, 500);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [cardData, addLog]);
+
   const saveAsImage = async () => {
-    if (!cardRef.current || !cardData) return;
+    if (!cardData) {
+      addLog("카드 데이터 없음", "error");
+      return;
+    }
 
     setIsGenerating(true);
+    const fileName = `지화명함_${cardData.userName}_${new Date().getTime()}.png`;
 
     try {
-      const canvas = await html2canvas(cardRef.current, {
-        scale: 2,
-        backgroundColor: "#FFFFFF",
-        logging: false,
-        useCORS: true,
-      });
-
-      const fileName = `지화명함_${cardData.userName}_${new Date().getTime()}.png`;
-
-      const blob: Blob | null = await new Promise((resolve) => {
-        canvas.toBlob((b) => resolve(b), "image/png");
-      });
+      let blob = preparedBlobRef.current;
 
       if (!blob) {
-        throw new Error("이미지 변환 실패");
+        addLog("사전 생성 안 됨, 지금 생성 중...", "warn");
+        if (!cardRef.current) throw new Error("cardRef 없음");
+        const canvas = await html2canvas(cardRef.current, {
+          scale: 2,
+          backgroundColor: "#FFFFFF",
+          logging: false,
+          useCORS: true,
+        });
+        blob = await new Promise<Blob | null>((resolve) => {
+          canvas.toBlob((b) => resolve(b), "image/png");
+        });
       }
 
-      // iOS Safari는 <a download>가 동작하지 않으므로 Web Share API 우선 시도
+      if (!blob) throw new Error("이미지 변환 실패");
+      addLog(`저장 시작 (${Math.round(blob.size / 1024)}KB)`);
+
       const file = new File([blob], fileName, { type: "image/png" });
       const navShare = navigator as Navigator & { canShare?: (data: ShareData) => boolean };
-      if (navShare.canShare && navShare.canShare({ files: [file] })) {
+      const canShareFiles = typeof navShare.canShare === "function" && navShare.canShare({ files: [file] });
+      addLog(`canShare(files)=${canShareFiles}`);
+
+      if (canShareFiles && typeof navigator.share === "function") {
         try {
           await navigator.share({ files: [file], title: "지화 명함" });
+          addLog("공유 완료");
           setIsSaved(true);
           setTimeout(() => setIsSaved(false), 3000);
           return;
         } catch (shareError) {
-          // 사용자가 공유 취소한 경우 종료, 그 외에는 폴백으로 진행
-          if ((shareError as Error).name === "AbortError") return;
+          const name = (shareError as Error).name;
+          addLog(`share 실패: ${name} - ${(shareError as Error).message}`, "warn");
+          if (name === "AbortError") return;
         }
       }
 
-      // Android/Desktop: Blob + FileSaver (범용)
-      FileSaver.saveAs(blob, fileName);
+      // 폴백 1: FileSaver
+      try {
+        FileSaver.saveAs(blob, fileName);
+        addLog("FileSaver 호출 완료");
+        setIsSaved(true);
+        setTimeout(() => setIsSaved(false), 3000);
+        return;
+      } catch (fsErr) {
+        addLog(`FileSaver 실패: ${(fsErr as Error).message}`, "warn");
+      }
 
+      // 폴백 2: blob URL 새 탭 (iOS 구형 대응 - 길게 눌러 저장 안내)
+      const url = URL.createObjectURL(blob);
+      const win = window.open(url, "_blank");
+      if (!win) {
+        addLog("팝업 차단됨 - 같은 탭으로 이동", "warn");
+        window.location.href = url;
+      } else {
+        addLog("새 탭에 이미지 표시 - 길게 눌러 저장");
+      }
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 3000);
-    } catch (error) {
-      console.error("이미지 저장 실패:", error);
+    } catch (err) {
+      const msg = (err as Error).message || String(err);
+      addLog(`저장 실패: ${msg}`, "error");
+      setError(`저장 중 오류: ${msg}`);
     } finally {
       setIsGenerating(false);
     }
@@ -153,7 +235,7 @@ export default function SharedCard() {
     );
   }
 
-  if (error || !cardData) {
+  if (!cardData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-teal-50 via-emerald-50 to-cyan-50 flex items-center justify-center">
         <div className="text-center space-y-6">
@@ -162,7 +244,7 @@ export default function SharedCard() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-slate-800 mb-2">명함을 찾을 수 없습니다</h1>
-            <p className="text-slate-600 mb-6">올바르지 않은 QR코드이거나 만료된 링크입니다.</p>
+            <p className="text-slate-600 mb-6">{error || "올바르지 않은 QR코드이거나 만료된 링크입니다."}</p>
           </div>
         </div>
       </div>
@@ -172,13 +254,11 @@ export default function SharedCard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 via-emerald-50 to-cyan-50 flex items-center justify-center px-3 py-6 sm:p-4">
       <div className="max-w-2xl w-full space-y-5 sm:space-y-8">
-        {/* 헤더 */}
         <div className="text-center">
           <h1 className="text-2xl sm:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 mb-1 sm:mb-2">지화 명함</h1>
           <p className="text-sm sm:text-base text-slate-600 font-medium">QR코드로 공유된 디지털 명함입니다</p>
         </div>
 
-        {/* 명함 */}
         <div className="flex justify-center">
           <div
             style={{
@@ -207,8 +287,7 @@ export default function SharedCard() {
           </div>
         </div>
 
-        {/* 저장 버튼 */}
-        <div className="flex justify-center gap-3 mb-4 sm:mb-6">
+        <div className="flex flex-col items-center gap-2 mb-2">
           <button
             onClick={saveAsImage}
             disabled={isGenerating}
@@ -218,17 +297,46 @@ export default function SharedCard() {
           >
             {isSaved ? "저장 완료!" : isGenerating ? "저장 중..." : "명함 저장"}
           </button>
+          {!blobReady && !isSaved && <p className="text-xs text-slate-500">이미지 준비 중... ({logs.length > 0 ? logs[logs.length - 1]?.msg : ""})</p>}
+          {blobReady && <p className="text-xs text-emerald-600 font-medium">저장 준비 완료</p>}
         </div>
 
-        {/* 안내 메시지 */}
         <div className="text-center">
           <div className="inline-block bg-gradient-to-r from-teal-50 to-emerald-50 rounded-xl p-3 sm:p-4 border-2 border-teal-200/50 shadow-sm">
             <p className="text-slate-700 text-xs sm:text-sm font-medium">
               <span className="text-emerald-600 font-bold">서대문농아인복지관</span>에서 제공하는 지화 명함 서비스입니다
             </p>
-            {isSaved && <p className="text-green-600 text-xs sm:text-sm font-medium mt-2">파일이 다운로드 폴더에 저장되었습니다!</p>}
+            <p className="text-slate-500 text-xs mt-2">※ 아이폰: 공유 메뉴에서 &quot;이미지 저장&quot; 선택</p>
+            {isSaved && <p className="text-green-600 text-xs sm:text-sm font-medium mt-2">저장되었습니다!</p>}
+            {error && <p className="text-red-600 text-xs sm:text-sm font-medium mt-2">{error}</p>}
           </div>
         </div>
+
+        <div className="text-center">
+          <button
+            onClick={() => setShowLogs((v) => !v)}
+            className="text-xs text-slate-400 underline"
+          >
+            {showLogs ? "로그 숨기기" : "문제가 있으신가요? 로그 보기"}
+          </button>
+        </div>
+
+        {showLogs && (
+          <div className="bg-slate-900 text-slate-100 rounded-lg p-3 text-xs font-mono max-h-60 overflow-auto">
+            <div className="text-slate-400 mb-2">
+              UA: {typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 80) : ""}
+            </div>
+            {logs.length === 0 ? (
+              <div className="text-slate-500">로그 없음</div>
+            ) : (
+              logs.map((l, i) => (
+                <div key={i} className={l.level === "error" ? "text-red-400" : l.level === "warn" ? "text-yellow-300" : "text-slate-200"}>
+                  [{l.ts}] {l.msg}
+                </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
