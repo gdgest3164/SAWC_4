@@ -171,96 +171,119 @@ export default function SharedCard() {
     };
   }, [cardData, addLog]);
 
-  const saveAsImage = async () => {
-    if (!cardData) {
-      addLog("카드 데이터 없음", "error");
-      return;
+  const getOrCreateBlob = async (): Promise<{ blob: Blob; fileName: string }> => {
+    const fileName = `지화명함_${cardData!.userName}_${new Date().getTime()}.png`;
+    let blob = preparedBlobRef.current;
+
+    if (!blob) {
+      addLog("사전 생성 안 됨, 지금 생성 중...", "warn");
+      if (!cardRef.current) throw new Error("cardRef 없음");
+
+      try {
+        blob = await htmlToBlob(cardRef.current, {
+          pixelRatio: 2,
+          backgroundColor: "#FFFFFF",
+          width: 620,
+          height: 380,
+          cacheBust: true,
+          style: { transform: "none", transformOrigin: "top left" },
+        });
+      } catch (e) {
+        addLog(`html-to-image 실패, html2canvas 폴백: ${(e as Error).message}`, "warn");
+        const canvas = await html2canvas(cardRef.current, {
+          scale: 2,
+          backgroundColor: "#FFFFFF",
+          logging: false,
+          useCORS: true,
+          allowTaint: true,
+          width: 620,
+          height: 380,
+        });
+        blob = await new Promise<Blob | null>((resolve) => {
+          canvas.toBlob((b) => resolve(b), "image/png");
+        });
+      }
     }
 
+    if (!blob) throw new Error("이미지 변환 실패");
+    return { blob, fileName };
+  };
+
+  const isIOS = (): boolean => {
+    if (typeof navigator === "undefined") return false;
+    const ua = navigator.userAgent;
+    return /iPad|iPhone|iPod/.test(ua) || (ua.includes("Mac") && "ontouchend" in document);
+  };
+
+  // 기본 저장: iOS는 Web Share(사진첩), 그 외는 직접 다운로드
+  const saveAsImage = async () => {
+    if (!cardData) return;
     setIsGenerating(true);
-    const fileName = `지화명함_${cardData.userName}_${new Date().getTime()}.png`;
-
     try {
-      let blob = preparedBlobRef.current;
-
-      if (!blob) {
-        addLog("사전 생성 안 됨, 지금 생성 중...", "warn");
-        if (!cardRef.current) throw new Error("cardRef 없음");
-
-        try {
-          blob = await htmlToBlob(cardRef.current, {
-            pixelRatio: 2,
-            backgroundColor: "#FFFFFF",
-            width: 620,
-            height: 380,
-            cacheBust: true,
-            style: { transform: "none", transformOrigin: "top left" },
-          });
-        } catch (e) {
-          addLog(`html-to-image 실패, html2canvas 폴백: ${(e as Error).message}`, "warn");
-          const canvas = await html2canvas(cardRef.current, {
-            scale: 2,
-            backgroundColor: "#FFFFFF",
-            logging: false,
-            useCORS: true,
-            allowTaint: true,
-            width: 620,
-            height: 380,
-          });
-          blob = await new Promise<Blob | null>((resolve) => {
-            canvas.toBlob((b) => resolve(b), "image/png");
-          });
-        }
-      }
-
-      if (!blob) throw new Error("이미지 변환 실패");
+      const { blob, fileName } = await getOrCreateBlob();
       addLog(`저장 시작 (${Math.round(blob.size / 1024)}KB)`);
 
-      const file = new File([blob], fileName, { type: "image/png" });
-      const navShare = navigator as Navigator & { canShare?: (data: ShareData) => boolean };
-      const canShareFiles = typeof navShare.canShare === "function" && navShare.canShare({ files: [file] });
-      addLog(`canShare(files)=${canShareFiles}`);
-
-      if (canShareFiles && typeof navigator.share === "function") {
-        try {
-          await navigator.share({ files: [file], title: "지화 명함" });
-          addLog("공유 완료");
-          setIsSaved(true);
-          setTimeout(() => setIsSaved(false), 3000);
-          return;
-        } catch (shareError) {
-          const name = (shareError as Error).name;
-          addLog(`share 실패: ${name} - ${(shareError as Error).message}`, "warn");
-          if (name === "AbortError") return;
+      if (isIOS()) {
+        // iOS: Web Share만 사진첩 저장 가능
+        const file = new File([blob], fileName, { type: "image/png" });
+        const navShare = navigator as Navigator & { canShare?: (data: ShareData) => boolean };
+        if (navShare.canShare && navShare.canShare({ files: [file] }) && typeof navigator.share === "function") {
+          try {
+            await navigator.share({ files: [file], title: "지화 명함" });
+            addLog("공유(저장) 완료");
+            setIsSaved(true);
+            setTimeout(() => setIsSaved(false), 3000);
+            return;
+          } catch (shareError) {
+            const name = (shareError as Error).name;
+            addLog(`share 실패: ${name}`, "warn");
+            if (name === "AbortError") return;
+          }
         }
-      }
-
-      // 폴백 1: FileSaver
-      try {
-        FileSaver.saveAs(blob, fileName);
-        addLog("FileSaver 호출 완료");
+        // iOS 구형: blob URL 새 탭 → 길게 눌러 저장
+        const url = URL.createObjectURL(blob);
+        window.open(url, "_blank") || (window.location.href = url);
+        addLog("iOS 구형: 새 탭 열기");
         setIsSaved(true);
         setTimeout(() => setIsSaved(false), 3000);
-        return;
-      } catch (fsErr) {
-        addLog(`FileSaver 실패: ${(fsErr as Error).message}`, "warn");
-      }
-
-      // 폴백 2: blob URL 새 탭 (iOS 구형 대응 - 길게 눌러 저장 안내)
-      const url = URL.createObjectURL(blob);
-      const win = window.open(url, "_blank");
-      if (!win) {
-        addLog("팝업 차단됨 - 같은 탭으로 이동", "warn");
-        window.location.href = url;
       } else {
-        addLog("새 탭에 이미지 표시 - 길게 눌러 저장");
+        // Android/Desktop: 직접 다운로드 (다운로드 폴더 → 갤러리 자동 인식)
+        FileSaver.saveAs(blob, fileName);
+        addLog("다운로드 시작");
+        setIsSaved(true);
+        setTimeout(() => setIsSaved(false), 3000);
       }
-      setIsSaved(true);
-      setTimeout(() => setIsSaved(false), 3000);
     } catch (err) {
       const msg = (err as Error).message || String(err);
       addLog(`저장 실패: ${msg}`, "error");
       setError(`저장 중 오류: ${msg}`);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // 공유하기: 명시적으로 공유 시트 호출 (카카오톡/메일 등)
+  const shareImage = async () => {
+    if (!cardData) return;
+    setIsGenerating(true);
+    try {
+      const { blob, fileName } = await getOrCreateBlob();
+      const file = new File([blob], fileName, { type: "image/png" });
+      const navShare = navigator as Navigator & { canShare?: (data: ShareData) => boolean };
+      if (navShare.canShare && navShare.canShare({ files: [file] }) && typeof navigator.share === "function") {
+        try {
+          await navigator.share({ files: [file], title: "지화 명함" });
+          addLog("공유 완료");
+        } catch (shareError) {
+          const name = (shareError as Error).name;
+          addLog(`share 실패: ${name}`, "warn");
+        }
+      } else {
+        addLog("이 기기는 공유 기능 미지원", "warn");
+        setError("이 기기는 공유 기능을 지원하지 않습니다. 저장 후 공유하세요.");
+      }
+    } catch (err) {
+      addLog(`공유 실패: ${(err as Error).message}`, "error");
     } finally {
       setIsGenerating(false);
     }
@@ -330,17 +353,26 @@ export default function SharedCard() {
         </div>
 
         <div className="flex flex-col items-center gap-2 mb-2">
-          <button
-            onClick={saveAsImage}
-            disabled={isGenerating}
-            className={`px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r active:scale-95 transition-all duration-150 touch-manipulation min-h-[48px] sm:min-h-[56px] min-w-[120px] sm:min-w-[140px] border border-white/20 rounded-xl shadow-xl font-bold text-base sm:text-lg text-white ${
-              isSaved ? "from-green-500 to-green-600" : isGenerating ? "from-gray-400 to-gray-500 cursor-not-allowed" : "from-teal-600 to-emerald-600 active:from-teal-700 active:to-emerald-700"
-            }`}
-          >
-            {isSaved ? "저장 완료!" : isGenerating ? "저장 중..." : "명함 저장"}
-          </button>
-          {!blobReady && !isSaved && <p className="text-xs text-slate-500">이미지 준비 중... ({logs.length > 0 ? logs[logs.length - 1]?.msg : ""})</p>}
-          {blobReady && <p className="text-xs text-emerald-600 font-medium">저장 준비 완료</p>}
+          <div className="flex gap-3">
+            <button
+              onClick={saveAsImage}
+              disabled={isGenerating}
+              className={`px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r active:scale-95 transition-all duration-150 touch-manipulation min-h-[48px] sm:min-h-[56px] min-w-[120px] sm:min-w-[140px] border border-white/20 rounded-xl shadow-xl font-bold text-base sm:text-lg text-white ${
+                isSaved ? "from-green-500 to-green-600" : isGenerating ? "from-gray-400 to-gray-500 cursor-not-allowed" : "from-teal-600 to-emerald-600 active:from-teal-700 active:to-emerald-700"
+              }`}
+            >
+              {isSaved ? "저장 완료!" : isGenerating ? "저장 중..." : "명함 저장"}
+            </button>
+            <button
+              onClick={shareImage}
+              disabled={isGenerating}
+              className="px-5 sm:px-6 py-3 sm:py-4 bg-white active:scale-95 transition-all duration-150 touch-manipulation min-h-[48px] sm:min-h-[56px] border-2 border-teal-500 rounded-xl shadow-md font-bold text-base sm:text-lg text-teal-600 disabled:opacity-50"
+            >
+              공유하기
+            </button>
+          </div>
+          {!blobReady && !isSaved && <p className="text-xs text-slate-500">이미지 준비 중...</p>}
+          {blobReady && !isSaved && <p className="text-xs text-emerald-600 font-medium">저장 준비 완료</p>}
         </div>
 
         <div className="text-center">
@@ -348,7 +380,8 @@ export default function SharedCard() {
             <p className="text-slate-700 text-xs sm:text-sm font-medium">
               <span className="text-emerald-600 font-bold">서대문농아인복지관</span>에서 제공하는 지화 명함 서비스입니다
             </p>
-            <p className="text-slate-500 text-xs mt-2">※ 아이폰: 공유 메뉴에서 &quot;이미지 저장&quot; 선택</p>
+            <p className="text-slate-500 text-xs mt-2">※ &quot;명함 저장&quot; 탭 후 갤러리/사진첩에서 확인하세요</p>
+            <p className="text-slate-500 text-xs">※ 아이폰: 공유 메뉴에서 &quot;이미지 저장&quot; 선택</p>
             {isSaved && <p className="text-green-600 text-xs sm:text-sm font-medium mt-2">저장되었습니다!</p>}
             {error && <p className="text-red-600 text-xs sm:text-sm font-medium mt-2">{error}</p>}
           </div>
