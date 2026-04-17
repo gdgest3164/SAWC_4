@@ -131,6 +131,9 @@ export default function SharedCard() {
         await waitForImages(cardRef.current);
         if (cancelled) return;
 
+        const rect = cardRef.current.getBoundingClientRect();
+        addLog(`cardRef rect=${Math.round(rect.width)}x${Math.round(rect.height)}`);
+
         const canvas = await html2canvas(cardRef.current, {
           scale: 2,
           backgroundColor: "#FFFFFF",
@@ -138,6 +141,39 @@ export default function SharedCard() {
           useCORS: true,
           allowTaint: true,
           imageTimeout: 15000,
+          width: 620,
+          height: 380,
+          windowWidth: 1280,
+          windowHeight: 800,
+          ignoreElements: (el) => {
+            if (el.tagName === "IMG") {
+              const img = el as HTMLImageElement;
+              if (img.naturalWidth === 0 || img.naturalHeight === 0) {
+                addLog(`스킵: 0크기 이미지 ${img.src.slice(-40)}`, "warn");
+                return true;
+              }
+            }
+            const r = (el as HTMLElement).getBoundingClientRect?.();
+            if (r && (r.width === 0 || r.height === 0)) {
+              return false; // 0크기 래퍼는 그대로 두고 자식 처리에 맡김
+            }
+            return false;
+          },
+          onclone: (clonedDoc, clonedEl) => {
+            // 복제본에서 transform/backdrop-filter 제거
+            const all = clonedEl.querySelectorAll<HTMLElement>("*");
+            all.forEach((e) => {
+              const s = e.style;
+              if (s.transform) s.transform = "none";
+              if (s.backdropFilter) s.backdropFilter = "none";
+              (s as CSSStyleDeclaration & { webkitBackdropFilter?: string }).webkitBackdropFilter = "none";
+            });
+            // 루트도 transform 제거 & 명확한 크기
+            clonedEl.style.transform = "none";
+            clonedEl.style.width = "620px";
+            clonedEl.style.height = "380px";
+            addLog("클론 DOM 정리 완료");
+          },
         });
 
         if (cancelled) return;
