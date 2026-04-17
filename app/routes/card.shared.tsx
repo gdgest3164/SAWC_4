@@ -101,6 +101,26 @@ export default function SharedCard() {
 
     addLog("이미지 사전 생성 시작");
 
+    const waitForImages = async (root: HTMLElement) => {
+      const imgs = Array.from(root.querySelectorAll("img"));
+      addLog(`이미지 ${imgs.length}개 로드 대기`);
+      await Promise.all(
+        imgs.map((img) => {
+          if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+          return new Promise<void>((resolve) => {
+            const done = () => resolve();
+            img.addEventListener("load", done, { once: true });
+            img.addEventListener("error", done, { once: true });
+            // 안전망: 5초 timeout
+            setTimeout(done, 5000);
+          });
+        })
+      );
+      const failed = imgs.filter((i) => !i.complete || i.naturalWidth === 0);
+      if (failed.length > 0) addLog(`로드 실패/0크기 이미지 ${failed.length}개`, "warn");
+      else addLog("모든 이미지 로드 완료");
+    };
+
     const prepare = async () => {
       try {
         if (!cardRef.current) {
@@ -108,12 +128,16 @@ export default function SharedCard() {
           return;
         }
 
+        await waitForImages(cardRef.current);
+        if (cancelled) return;
+
         const canvas = await html2canvas(cardRef.current, {
           scale: 2,
           backgroundColor: "#FFFFFF",
           logging: false,
           useCORS: true,
-          allowTaint: false,
+          allowTaint: true,
+          imageTimeout: 15000,
         });
 
         if (cancelled) return;
@@ -137,8 +161,8 @@ export default function SharedCard() {
       }
     };
 
-    // 이미지 로드 여유 주고 실행
-    const timer = setTimeout(prepare, 500);
+    // 레이아웃 안정화 대기
+    const timer = setTimeout(prepare, 300);
     return () => {
       cancelled = true;
       clearTimeout(timer);
