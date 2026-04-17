@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "@remix-run/react";
 import type { MetaFunction } from "@remix-run/node";
 import html2canvas from "html2canvas";
+import * as FileSaver from "file-saver";
 import BusinessCard from "~/components/BusinessCard";
 
 export const meta: MetaFunction = () => {
@@ -105,13 +106,32 @@ export default function SharedCard() {
       });
 
       const fileName = `지화명함_${cardData.userName}_${new Date().getTime()}.png`;
-      const dataUrl = canvas.toDataURL("image/png");
 
-      // <a download> 방식 (모바일 포함 범용 지원)
-      const link = document.createElement("a");
-      link.download = fileName;
-      link.href = dataUrl;
-      link.click();
+      const blob: Blob | null = await new Promise((resolve) => {
+        canvas.toBlob((b) => resolve(b), "image/png");
+      });
+
+      if (!blob) {
+        throw new Error("이미지 변환 실패");
+      }
+
+      // iOS Safari는 <a download>가 동작하지 않으므로 Web Share API 우선 시도
+      const file = new File([blob], fileName, { type: "image/png" });
+      const navShare = navigator as Navigator & { canShare?: (data: ShareData) => boolean };
+      if (navShare.canShare && navShare.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: "지화 명함" });
+          setIsSaved(true);
+          setTimeout(() => setIsSaved(false), 3000);
+          return;
+        } catch (shareError) {
+          // 사용자가 공유 취소한 경우 종료, 그 외에는 폴백으로 진행
+          if ((shareError as Error).name === "AbortError") return;
+        }
+      }
+
+      // Android/Desktop: Blob + FileSaver (범용)
+      FileSaver.saveAs(blob, fileName);
 
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 3000);
