@@ -50,6 +50,39 @@ const waitForImages = async (root: HTMLElement) => {
   );
 };
 
+// iOS에서 html-to-image의 img fetch가 실패해 이미지가 빠지는 문제 회피:
+// 모든 <img>를 canvas로 그려서 data URL로 치환
+const inlineImagesAsDataUrl = async (root: HTMLElement): Promise<() => void> => {
+  const imgs = Array.from(root.querySelectorAll("img"));
+  const originals = new Map<HTMLImageElement, string>();
+
+  await Promise.all(
+    imgs.map(async (img) => {
+      if (!img.naturalWidth || !img.naturalHeight) return;
+      if (img.src.startsWith("data:")) return;
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        ctx.drawImage(img, 0, 0);
+        const dataUrl = canvas.toDataURL("image/png");
+        originals.set(img, img.src);
+        img.src = dataUrl;
+      } catch {
+        // tainted canvas 등 실패 시 원본 유지
+      }
+    })
+  );
+
+  return () => {
+    originals.forEach((src, img) => {
+      img.src = src;
+    });
+  };
+};
+
 const renderCardToBlob = async (el: HTMLElement): Promise<Blob> => {
   try {
     const blob = await htmlToBlob(el, {
@@ -57,7 +90,7 @@ const renderCardToBlob = async (el: HTMLElement): Promise<Blob> => {
       backgroundColor: "#FFFFFF",
       width: 620,
       height: 380,
-      cacheBust: true,
+      skipFonts: true,
       style: { transform: "none", transformOrigin: "top left" },
     });
     if (blob) return blob;
@@ -138,10 +171,16 @@ export default function SharedCard() {
         if (!cardRef.current) return;
         await waitForImages(cardRef.current);
         if (cancelled) return;
-        const blob = await renderCardToBlob(cardRef.current);
-        if (cancelled) return;
-        preparedBlobRef.current = blob;
-        setBlobReady(true);
+        const restore = await inlineImagesAsDataUrl(cardRef.current);
+        try {
+          if (cancelled) return;
+          const blob = await renderCardToBlob(cardRef.current);
+          if (cancelled) return;
+          preparedBlobRef.current = blob;
+          setBlobReady(true);
+        } finally {
+          restore();
+        }
       } catch (e) {
         console.error("이미지 사전 생성 실패:", e);
       }
@@ -159,7 +198,13 @@ export default function SharedCard() {
     let blob = preparedBlobRef.current;
     if (!blob) {
       if (!cardRef.current) throw new Error("카드 요소 없음");
-      blob = await renderCardToBlob(cardRef.current);
+      await waitForImages(cardRef.current);
+      const restore = await inlineImagesAsDataUrl(cardRef.current);
+      try {
+        blob = await renderCardToBlob(cardRef.current);
+      } finally {
+        restore();
+      }
     }
     return { blob, fileName };
   };
