@@ -50,28 +50,37 @@ const waitForImages = async (root: HTMLElement) => {
   );
 };
 
-// iOS에서 html-to-image의 img fetch가 실패해 이미지가 빠지는 문제 회피:
-// 모든 <img>를 canvas로 그려서 data URL로 치환
+// iOS Safari에서 html-to-image 내부 img fetch 실패로 이미지가 빠지는 문제 회피:
+// 렌더 전에 모든 <img>의 src를 fetch로 data URL로 치환
+const fetchToDataUrl = async (url: string): Promise<string> => {
+  const res = await fetch(url);
+  const blob = await res.blob();
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+};
+
 const inlineImagesAsDataUrl = async (root: HTMLElement): Promise<() => void> => {
   const imgs = Array.from(root.querySelectorAll("img"));
   const originals = new Map<HTMLImageElement, string>();
 
   await Promise.all(
     imgs.map(async (img) => {
-      if (!img.naturalWidth || !img.naturalHeight) return;
-      if (img.src.startsWith("data:")) return;
+      const src = img.src;
+      if (!src || src.startsWith("data:")) return;
       try {
-        const canvas = document.createElement("canvas");
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
-        ctx.drawImage(img, 0, 0);
-        const dataUrl = canvas.toDataURL("image/png");
-        originals.set(img, img.src);
+        const dataUrl = await fetchToDataUrl(src);
+        originals.set(img, src);
         img.src = dataUrl;
+        // data URL 반영 후 디코딩 대기 (iOS Safari는 src 교체 직후 렌더 지연)
+        if (img.decode) {
+          await img.decode().catch(() => {});
+        }
       } catch {
-        // tainted canvas 등 실패 시 원본 유지
+        // fetch 실패 시 원본 유지
       }
     })
   );
