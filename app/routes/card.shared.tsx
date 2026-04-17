@@ -92,31 +92,60 @@ const inlineImagesAsDataUrl = async (root: HTMLElement): Promise<() => void> => 
   };
 };
 
+const renderWithHtmlToImage = async (el: HTMLElement): Promise<Blob> => {
+  const blob = await htmlToBlob(el, {
+    pixelRatio: 2,
+    backgroundColor: "#FFFFFF",
+    width: 620,
+    height: 380,
+    skipFonts: true,
+    style: { transform: "none", transformOrigin: "top left" },
+  });
+  if (!blob) throw new Error("html-to-image 결과 없음");
+  return blob;
+};
+
+const renderWithHtml2Canvas = async (el: HTMLElement): Promise<Blob> => {
+  const cleanClone = (clonedEl: HTMLElement) => {
+    const all = clonedEl.querySelectorAll<HTMLElement>("*");
+    all.forEach((e) => {
+      const s = e.style;
+      if (s.transform) s.transform = "none";
+      if (s.backdropFilter) s.backdropFilter = "none";
+      (s as CSSStyleDeclaration & { webkitBackdropFilter?: string }).webkitBackdropFilter = "none";
+    });
+    clonedEl.style.transform = "none";
+    clonedEl.style.width = "620px";
+    clonedEl.style.height = "380px";
+  };
+
+  const canvas = await html2canvas(el, {
+    scale: 2,
+    backgroundColor: "#FFFFFF",
+    logging: false,
+    useCORS: true,
+    allowTaint: true,
+    imageTimeout: 15000,
+    width: 620,
+    height: 380,
+    windowWidth: 1280,
+    windowHeight: 800,
+    onclone: (_d, c) => cleanClone(c),
+  });
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob 실패"))), "image/png");
+  });
+};
+
+// iOS: html-to-image가 foreignObject 내 <img> 렌더 실패 → html2canvas 우선
+// Android/Desktop: html2canvas의 createPattern 이슈 회피 → html-to-image 우선
 const renderCardToBlob = async (el: HTMLElement): Promise<Blob> => {
+  const primary = isIOS() ? renderWithHtml2Canvas : renderWithHtmlToImage;
+  const fallback = isIOS() ? renderWithHtmlToImage : renderWithHtml2Canvas;
   try {
-    const blob = await htmlToBlob(el, {
-      pixelRatio: 2,
-      backgroundColor: "#FFFFFF",
-      width: 620,
-      height: 380,
-      skipFonts: true,
-      style: { transform: "none", transformOrigin: "top left" },
-    });
-    if (blob) return blob;
-    throw new Error("html-to-image 결과 없음");
+    return await primary(el);
   } catch {
-    const canvas = await html2canvas(el, {
-      scale: 2,
-      backgroundColor: "#FFFFFF",
-      logging: false,
-      useCORS: true,
-      allowTaint: true,
-      width: 620,
-      height: 380,
-    });
-    return new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob 실패"))), "image/png");
-    });
+    return await fallback(el);
   }
 };
 
