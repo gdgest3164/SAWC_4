@@ -134,9 +134,27 @@ export default function SharedCard() {
         const rect = cardRef.current.getBoundingClientRect();
         addLog(`cardRef rect=${Math.round(rect.width)}x${Math.round(rect.height)}`);
 
-        const canvas = await html2canvas(cardRef.current, {
+        const cleanClone = (clonedEl: HTMLElement) => {
+          const all = clonedEl.querySelectorAll<HTMLElement>("*");
+          all.forEach((e) => {
+            const s = e.style;
+            if (s.transform) s.transform = "none";
+            if (s.backdropFilter) s.backdropFilter = "none";
+            (s as CSSStyleDeclaration & { webkitBackdropFilter?: string }).webkitBackdropFilter = "none";
+            // 0크기 요소는 숨김 처리 (createPattern 0x0 방지)
+            const r = e.getBoundingClientRect();
+            if (r.width === 0 || r.height === 0) {
+              e.style.display = "none";
+            }
+          });
+          clonedEl.style.transform = "none";
+          clonedEl.style.width = "620px";
+          clonedEl.style.height = "380px";
+        };
+
+        const baseOptions = {
           scale: 2,
-          backgroundColor: "#FFFFFF",
+          backgroundColor: "#FFFFFF" as const,
           logging: false,
           useCORS: true,
           allowTaint: true,
@@ -145,36 +163,50 @@ export default function SharedCard() {
           height: 380,
           windowWidth: 1280,
           windowHeight: 800,
-          ignoreElements: (el) => {
-            if (el.tagName === "IMG") {
-              const img = el as HTMLImageElement;
-              if (img.naturalWidth === 0 || img.naturalHeight === 0) {
-                addLog(`스킵: 0크기 이미지 ${img.src.slice(-40)}`, "warn");
-                return true;
+        };
+
+        let canvas: HTMLCanvasElement | null = null;
+
+        // 1차 시도: foreignObjectRendering (createPattern 우회)
+        try {
+          addLog("foreignObject 렌더 시도");
+          canvas = await html2canvas(cardRef.current, {
+            ...baseOptions,
+            foreignObjectRendering: true,
+            onclone: (_doc, clonedEl) => {
+              cleanClone(clonedEl);
+              addLog("클론 DOM 정리 완료 (FO)");
+            },
+          });
+          addLog(`foreignObject 성공 ${canvas.width}x${canvas.height}`);
+          // foreignObject는 일부 브라우저에서 빈 캔버스 반환 가능
+          if (canvas.width === 0 || canvas.height === 0) {
+            addLog("foreignObject 결과 0크기, 표준 렌더 폴백", "warn");
+            canvas = null;
+          }
+        } catch (foErr) {
+          addLog(`foreignObject 실패: ${(foErr as Error).message}, 표준 폴백`, "warn");
+          canvas = null;
+        }
+
+        // 2차: 표준 element-by-element 렌더
+        if (!canvas) {
+          canvas = await html2canvas(cardRef.current, {
+            ...baseOptions,
+            foreignObjectRendering: false,
+            ignoreElements: (el) => {
+              if (el.tagName === "IMG") {
+                const img = el as HTMLImageElement;
+                if (img.naturalWidth === 0 || img.naturalHeight === 0) return true;
               }
-            }
-            const r = (el as HTMLElement).getBoundingClientRect?.();
-            if (r && (r.width === 0 || r.height === 0)) {
-              return false; // 0크기 래퍼는 그대로 두고 자식 처리에 맡김
-            }
-            return false;
-          },
-          onclone: (clonedDoc, clonedEl) => {
-            // 복제본에서 transform/backdrop-filter 제거
-            const all = clonedEl.querySelectorAll<HTMLElement>("*");
-            all.forEach((e) => {
-              const s = e.style;
-              if (s.transform) s.transform = "none";
-              if (s.backdropFilter) s.backdropFilter = "none";
-              (s as CSSStyleDeclaration & { webkitBackdropFilter?: string }).webkitBackdropFilter = "none";
-            });
-            // 루트도 transform 제거 & 명확한 크기
-            clonedEl.style.transform = "none";
-            clonedEl.style.width = "620px";
-            clonedEl.style.height = "380px";
-            addLog("클론 DOM 정리 완료");
-          },
-        });
+              return false;
+            },
+            onclone: (_doc, clonedEl) => {
+              cleanClone(clonedEl);
+              addLog("클론 DOM 정리 완료 (표준)");
+            },
+          });
+        }
 
         if (cancelled) return;
         addLog(`캔버스 생성 완료 ${canvas.width}x${canvas.height}`);
